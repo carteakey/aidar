@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}patterns — aidar.lol{% endblock %}
+
+{% block content %}
+
+<div class="section-header">
+  <span class="section-title">signal patterns</span>
+  <span class="c-dim" style="font-size:0.75rem">avg normalized score across all scanned pages &darr;</span>
+</div>
+
+{% if patterns %}
+<table class="data-table pattern-row">
+  <thead>
+    <tr>
+      <th>pattern</th>
+      <th>category</th>
+      <th>avg score</th>
+      <th>occurrences</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in patterns %}
+    {% set s = p.avg_score %}
+    {% if s >= 0.65 %}{% set sc = "c-red" %}{% set bc = "#f87171" %}
+    {% elif s >= 0.35 %}{% set sc = "c-yellow" %}{% set bc = "#facc15" %}
+    {% else %}{% set sc = "c-green" %}{% set bc = "#4ade80" %}{% endif %}
+    <tr>
+      <td>{{ p.pattern_id }}</td>
+      <td class="c-dim">{{ p.category }}</td>
+      <td>
+        <div class="score-bar-wrap">
+          <div class="score-bar">
+            <div class="score-bar-fill" style="width:{{ (s * 100)|int }}%; background:{{ bc }};"></div>
+          </div>
+          <span class="{{ sc }}">{{ "%.2f"|format(s) }}</span>
+        </div>
+      </td>
+      <td class="c-dim">{{ p.occurrences }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% else %}
+<div class="empty">
+  <div class="empty-big">( no pattern data yet )</div>
+  <div>patterns are scored once pages are scanned with <code>--save</code></div>
+</div>
+{% endif %}
+
+{% endblock %}

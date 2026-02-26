@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}aidar.lol — leaderboard{% endblock %}
+
+{% block content %}
+
+{% if stats and stats.total_scans %}
+<div class="stats-bar">
+  <div class="stat-item">
+    <span class="stat-value">{{ stats.total_scans or 0 }}</span>
+    <span class="stat-label">pages scanned</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-value">{{ stats.total_domains or 0 }}</span>
+    <span class="stat-label">domains tracked</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-value {% if stats.avg_score and stats.avg_score >= 65 %}c-red{% elif stats.avg_score and stats.avg_score >= 35 %}c-yellow{% else %}c-green{% endif %}">
+      {{ stats.avg_score or '—' }}
+    </span>
+    <span class="stat-label">avg stylistic index</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-value c-red">{{ stats.likely_ai or 0 }}</span>
+    <span class="stat-label">high index pages</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-value c-green">{{ stats.likely_human or 0 }}</span>
+    <span class="stat-label">low index pages</span>
+  </div>
+</div>
+{% endif %}
+
+{% if leaderboard %}
+<div class="section-header">
+  <span class="section-title">domain leaderboard</span>
+  <span class="c-dim" style="font-size:0.75rem">ranked by avg stylistic index &darr;</span>
+</div>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>domain</th>
+      <th>index</th>
+      <th>pages</th>
+      <th>last scanned</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in leaderboard %}
+    {% set score = row.avg_score | int %}
+    {% if score >= 65 %}
+      {% set color = "c-red" %}
+      {% set bar_color = "#f87171" %}
+    {% elif score >= 35 %}
+      {% set color = "c-yellow" %}
+      {% set bar_color = "#facc15" %}
+    {% else %}
+      {% set color = "c-green" %}
+      {% set bar_color = "#4ade80" %}
+    {% endif %}
+    <tr>
+      <td class="rank">{{ loop.index }}</td>
+      <td><a href="/domain/{{ row.domain }}">{{ row.domain }}</a></td>
+      <td>
+        <div class="score-bar-wrap">
+          <div class="score-bar">
+            <div class="score-bar-fill" style="width:{{ score }}%; background:{{ bar_color }};"></div>
+          </div>
+          <span class="score-num {{ color }}">{{ score }}</span>
+        </div>
+      </td>
+      <td class="c-dim">{{ row.pages }}</td>
+      <td class="c-dim" style="font-size:0.75rem">{{ row.last_scanned[:10] if row.last_scanned else '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% else %}
+<div class="empty">
+  <div class="empty-big">( no data yet )</div>
+  <div>run <code>aidar track &lt;domain&gt; --save</code> to populate the leaderboard</div>
+</div>
+{% endif %}
+
+{% endblock %}

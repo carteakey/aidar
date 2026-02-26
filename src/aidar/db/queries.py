@@ -120,3 +120,60 @@ def get_pattern_stats(conn: sqlite3.Connection) -> list[dict]:
 def url_already_scanned(conn: sqlite3.Connection, url: str) -> bool:
     row = conn.execute("SELECT id FROM scans WHERE url = ?", (url,)).fetchone()
     return row is not None
+
+
+def get_domain_scans(
+    conn: sqlite3.Connection,
+    domain: str,
+    limit: int = 100,
+) -> list[dict]:
+    """Return individual page scans for a domain, newest first."""
+    rows = conn.execute(
+        """
+        SELECT url, word_count, score, label, score_json, scanned_at
+        FROM scans
+        WHERE domain = ?
+        ORDER BY scanned_at DESC
+        LIMIT ?
+        """,
+        (domain, limit),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_global_stats(conn: sqlite3.Connection) -> dict:
+    """Return high-level corpus stats for the homepage."""
+    row = conn.execute(
+        """
+        SELECT
+            COUNT(*) as total_scans,
+            COUNT(DISTINCT domain) as total_domains,
+            ROUND(AVG(score), 1) as avg_score,
+            SUM(CASE WHEN label = 'LIKELY AI' THEN 1 ELSE 0 END) as likely_ai,
+            SUM(CASE WHEN label = 'UNCERTAIN' THEN 1 ELSE 0 END) as uncertain,
+            SUM(CASE WHEN label = 'LIKELY HUMAN' THEN 1 ELSE 0 END) as likely_human
+        FROM scans
+        """
+    ).fetchone()
+    return dict(row) if row else {}
+
+
+def get_domain_leaderboard(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
+    """Return per-domain aggregated stats for the leaderboard."""
+    rows = conn.execute(
+        """
+        SELECT
+            domain,
+            COUNT(*) as pages,
+            ROUND(AVG(score), 1) as avg_score,
+            MAX(score) as max_score,
+            MAX(scanned_at) as last_scanned
+        FROM scans
+        WHERE domain != ''
+        GROUP BY domain
+        ORDER BY avg_score DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    return [dict(row) for row in rows]

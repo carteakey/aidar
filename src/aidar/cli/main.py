@@ -67,4 +67,4 @@ def aidar(ctx: click.Context, patterns_dir: str | None, output: str) -> None:
 
 
 # Import subcommands so click can register them
-from aidar.cli import analyze, compare, patterns, scan  # noqa: E402, F401
+from aidar.cli import analyze, compare, discover, patterns, scan, track  # noqa: E402, F401

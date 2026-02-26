@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}{{ domain }} — aidar.lol{% endblock %}
+
+{% block content %}
+
+<div class="domain-hero">
+  <div class="domain-name">{{ domain }}</div>
+  <div class="domain-meta">
+    {{ stats.scans }} pages scanned &nbsp;&middot;&nbsp;
+    last updated {{ stats.latest[:10] if stats.latest else '—' }}
+  </div>
+</div>
+
+{% set score = stats.avg_score | int %}
+{% if score >= 65 %}
+  {% set color = "c-red" %}
+  {% set bar_color = "#f87171" %}
+{% elif score >= 35 %}
+  {% set color = "c-yellow" %}
+  {% set bar_color = "#facc15" %}
+{% else %}
+  {% set color = "c-green" %}
+  {% set bar_color = "#4ade80" %}
+{% endif %}
+
+<div class="metric-grid">
+  <div class="metric-cell">
+    <div class="metric-value {{ color }}">{{ stats.avg_score }}</div>
+    <div class="metric-label">avg index</div>
+  </div>
+  <div class="metric-cell">
+    <div class="metric-value">{{ stats.max_score }}</div>
+    <div class="metric-label">peak</div>
+  </div>
+  <div class="metric-cell">
+    <div class="metric-value">{{ stats.min_score }}</div>
+    <div class="metric-label">floor</div>
+  </div>
+  <div class="metric-cell">
+    <div class="metric-value">{{ stats.scans }}</div>
+    <div class="metric-label">pages</div>
+  </div>
+  <div class="metric-cell">
+    <div class="metric-value c-red">{{ stats.label_counts.get('LIKELY AI', 0) }}</div>
+    <div class="metric-label">high index</div>
+  </div>
+  <div class="metric-cell">
+    <div class="metric-value c-green">{{ stats.label_counts.get('LIKELY HUMAN', 0) }}</div>
+    <div class="metric-label">low index</div>
+  </div>
+</div>
+
+{% if scans %}
+<!-- avg category breakdown from most recent scans -->
+{% set recent = scans[:20] %}
+{% set cat_keys = ['phrases', 'punctuation', 'structure', 'vocabulary', 'emoji'] %}
+{% set cat_avgs = {} %}
+{% for cat in cat_keys %}
+  {% set vals = [] %}
+  {% for s in recent if s.categories %}
+    {% if s.categories[cat] is defined %}
+      {% set _ = vals.append(s.categories[cat]) %}
+    {% endif %}
+  {% endfor %}
+  {% if vals %}
+    {% set _ = cat_avgs.update({cat: (vals | sum / vals | length)}) %}
+  {% endif %}
+{% endfor %}
+
+{% if cat_avgs %}
+<div class="section-header" style="margin-top:2rem">
+  <span class="section-title">signal breakdown (avg, recent {{ recent|length }} pages)</span>
+</div>
+<div class="cat-grid">
+  {% for cat in cat_keys %}
+  {% set v = cat_avgs.get(cat, 0) %}
+  {% if v >= 0.65 %}{% set bc = "#f87171" %}
+  {% elif v >= 0.35 %}{% set bc = "#facc15" %}
+  {% else %}{% set bc = "#4ade80" %}{% endif %}
+  <div class="cat-row">
+    <span class="cat-name">{{ cat }}</span>
+    <div class="cat-bar">
+      <div class="cat-bar-fill" style="width:{{ (v * 100) | int }}%; background:{{ bc }};"></div>
+    </div>
+    <span style="font-size:0.8rem; color:{{ bc }};">{{ "%.2f"|format(v) }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="section-header" style="margin-top:2rem">
+  <span class="section-title">recent pages</span>
+</div>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>url</th>
+      <th>index</th>
+      <th>words</th>
+      <th>scanned</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for scan in scans %}
+    {% set s = scan.score %}
+    {% if s >= 65 %}{% set sc = "c-red" %}{% set bc = "#f87171" %}
+    {% elif s >= 35 %}{% set sc = "c-yellow" %}{% set bc = "#facc15" %}
+    {% else %}{% set sc = "c-green" %}{% set bc = "#4ade80" %}{% endif %}
+    <tr>
+      <td style="max-width:420px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+        <a href="{{ scan.url }}" target="_blank" title="{{ scan.url }}">
+          {{ scan.url | replace('https://', '') | replace('http://', '') }}
+        </a>
+      </td>
+      <td>
+        <div class="score-bar-wrap">
+          <div class="score-bar" style="width:50px">
+            <div class="score-bar-fill" style="width:{{ s }}%; background:{{ bc }};"></div>
+          </div>
+          <span class="{{ sc }}" style="font-weight:bold">{{ s }}</span>
+        </div>
+      </td>
+      <td class="c-dim">{{ scan.word_count }}</td>
+      <td class="c-dim" style="font-size:0.75rem">{{ scan.scanned_at[:10] if scan.scanned_at else '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% endblock %}

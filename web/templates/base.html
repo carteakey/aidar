@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}aidar.lol{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <meta name="description" content="Tracking the slow stylistic drift of the internet. One em-dash at a time.">
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <a href="/" class="logo">ai<span>dar</span>.lol</a>
+      <span class="tagline">// is the internet writing itself yet?</span>
+      <nav>
+        <a href="/" {% if request.url.path == "/" %}class="active"{% endif %}>leaderboard</a>
+        <a href="/patterns" {% if request.url.path == "/patterns" %}class="active"{% endif %}>patterns</a>
+        <a href="/about" {% if request.url.path == "/about" %}class="active"{% endif %}>about</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="container">
+  <span>aidar.lol &mdash; stylometric drift tracker</span>
+  <span>not a classifier. just vibes. quantified.</span>
+  <a href="https://github.com/carteakey/aidar" target="_blank">github</a>
+</footer>
+
+</body>
+</html>

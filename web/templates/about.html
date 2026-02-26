@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}about — aidar.lol{% endblock %}
+
+{% block content %}
+
+<div style="max-width: 640px; line-height: 2;">
+
+<p style="font-size:1.1rem; margin-bottom:2rem; color: var(--fg);">
+  aidar tracks stylistic patterns across the web that correlate with AI-era writing.
+  It doesn't know if you're a robot. It just notices things.
+</p>
+
+<div class="section-header"><span class="section-title">what it measures</span></div>
+<p style="margin-bottom:1.5rem; color: var(--fg-dim);">
+  Known linguistic signals: em dash frequency, hedging phrases (&ldquo;it&rsquo;s worth noting&rdquo;,
+  &ldquo;delve into&rdquo;, &ldquo;key takeaway&rdquo;), bullet point density, header overuse,
+  formal register vocabulary, emoji density. Each site gets a <strong>Stylistic Index</strong>
+  from 0&ndash;100. Higher = more signal. Lower = less signal. Draw your own conclusions.
+</p>
+
+<div class="section-header"><span class="section-title">what it is not</span></div>
+<p style="margin-bottom:1.5rem; color: var(--fg-dim);">
+  Not a classifier. Not a detector. Not a judgment. Humans use em dashes.
+  AI writes without them. The index is a data point for studying how the
+  web&rsquo;s writing style is shifting&mdash;not a verdict on any individual page or author.
+</p>
+
+<div class="section-header"><span class="section-title">the irony</span></div>
+<p style="margin-bottom:1.5rem; color: var(--fg-dim);">
+  This tool was written by Claude (an AI). The patterns it detects are largely
+  patterns Claude itself exhibits. We are aware of this. We find it funny.
+  The em dashes in the source code are <em>very</em> real.
+</p>
+
+<div class="section-header"><span class="section-title">inspired by</span></div>
+<p style="margin-bottom:1.5rem; color: var(--fg-dim);">
+  <a href="https://www.marginalia.nu/weird-ai-crap/hn/" target="_blank">
+    New accounts on Hacker News ten times more likely to use em-dashes
+  </a> &mdash; Marginalia, Feb 2026.
+</p>
+
+<div class="section-header"><span class="section-title">source</span></div>
+<p style="color: var(--fg-dim);">
+  <a href="https://github.com/carteakey/aidar" target="_blank">github.com/carteakey/aidar</a>
+  &nbsp;&mdash;&nbsp;
+  open source, MIT licensed, patterns are YAML files you can contribute to.
+</p>
+
+</div>
+
+{% endblock %}
