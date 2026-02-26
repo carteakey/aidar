@@ -40,6 +40,22 @@ echo "[litestream] Restoring ${AIDAR_DB} from replica..."
   && echo "[litestream] Restore complete." \
   || echo "[litestream] No existing replica — starting fresh."
 
+# Verify restore quality; fall back to seed DB if insufficient
+SCAN_COUNT=$(python3 -c "
+import sqlite3, sys
+try:
+    c = sqlite3.connect('${AIDAR_DB}')
+    print(c.execute('SELECT COUNT(*) FROM scans').fetchone()[0])
+except Exception as e:
+    print(0)
+" 2>/dev/null || echo "0")
+echo "[litestream] Post-restore scan count: ${SCAN_COUNT}"
+if [ "${SCAN_COUNT}" -lt 100 ] && [ -n "${SEED_DB_URL:-}" ]; then
+  echo "[litestream] Scan count too low — downloading seed DB from SEED_DB_URL..."
+  curl -fsSL "${SEED_DB_URL}" -o "${AIDAR_DB}"
+  echo "[litestream] Seed DB downloaded ($(wc -c < "${AIDAR_DB}") bytes)."
+fi
+
 # ── Run app with continuous replication via -exec ─────────────────────────────
 echo "[litestream] Starting with continuous replication..."
 exec "$LITESTREAM_BIN" replicate -config litestream.yml \
