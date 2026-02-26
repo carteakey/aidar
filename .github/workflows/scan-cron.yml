@@ -33,11 +33,5 @@ jobs:
           for domain in "${DOMAINS[@]}"; do
             echo "=== Scanning $domain ==="
             heroku run --app "$APP" --exit-code \
-              python -m aidar track "$domain" \
-                --skip-pattern /tag/ \
-                --skip-pattern /page/ \
-                --skip-pattern /author/ \
-                --skip-pattern /category/ \
-                --limit 100 \
-                --rescan-stale
+              bash scripts/run-track.sh "$domain"
           done
