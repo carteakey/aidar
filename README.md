@@ -16,3 +16,4 @@ aidar scan --batch urls.txt --save
 ## Pattern repository
 
 Patterns live in `patterns/` as YAML files. Add new signals by creating a YAML file in the appropriate category directory.
+# aidar
