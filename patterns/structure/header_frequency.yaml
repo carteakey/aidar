@@ -1,4 +1,5 @@
 id: header_frequency
+version: 1
 name: Excessive Header Frequency
 description: >
   AI content generators compulsively add headers to segment text, even for

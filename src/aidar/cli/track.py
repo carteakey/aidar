@@ -46,6 +46,12 @@ from aidar.output.renderer import console
     default="auto",
     show_default=True,
 )
+@click.option(
+    "--rescan-stale",
+    is_flag=True,
+    default=False,
+    help="Re-scan URLs where any pattern version has been bumped since last scan",
+)
 @click.pass_context
 def track(
     ctx: click.Context,
@@ -55,6 +61,7 @@ def track(
     db_path: str,
     skip_existing: bool,
     source: str,
+    rescan_stale: bool,
 ) -> None:
     """Discover and scan all pages for a domain, save results to DB.
 
@@ -91,7 +98,19 @@ def track(
 
     conn = get_connection(db_path)
 
-    if skip_existing:
+    if rescan_stale:
+        from aidar.db.queries import get_stale_urls
+        registry = ctx.obj["registry"]
+        current_versions = {p.id: p.version for p in registry.all_patterns()}
+        stale = set(get_stale_urls(conn, current_versions, domain=domain_name))
+        if stale:
+            console.print(f"[yellow]{len(stale)} URLs stale (pattern versions updated) — forcing rescan.[/yellow]")
+            urls = list(stale | set(u for u in urls if not url_already_scanned(conn, u)))
+        else:
+            console.print("[dim]No stale URLs found.[/dim]")
+            if skip_existing:
+                urls = [u for u in urls if not url_already_scanned(conn, u)]
+    elif skip_existing:
         before = len(urls)
         urls = [u for u in urls if not url_already_scanned(conn, u)]
         skipped = before - len(urls)

@@ -1,0 +1,19 @@
+id: type_token_ratio
+name: Low Vocabulary Diversity (STTR)
+version: 1
+description: >
+  Standardized Type-Token Ratio measures lexical diversity: unique words / total
+  words across sliding 50-word windows. AI models reuse vocabulary more than
+  humans — particularly restating the same concepts with slight rephrasing.
+  A lightweight proxy for "perplexity" without requiring a language model.
+  Score is inverted: low STTR (repetitive) → high score.
+category: vocabulary
+weight: 0.70
+detection_type: linguistic
+severity: medium
+references:
+  - https://www.tandfonline.com/doi/abs/10.1080/09296174.1990.10820076
+params:
+  metric: type_token_ratio
+  threshold_low: 0.15   # STTR diversity > 0.85 → score 0 (very diverse = human)
+  threshold_high: 0.55  # STTR diversity < 0.45 → score 1 (very repetitive = AI)

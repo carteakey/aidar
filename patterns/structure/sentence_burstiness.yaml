@@ -1,0 +1,20 @@
+id: sentence_burstiness
+name: Low Sentence Length Burstiness
+version: 1
+description: >
+  Humans naturally mix short punchy sentences with long winding ones. AI models
+  output sentences of suspiciously uniform length — medium-length, clean
+  subject-verb-object constructions with little variation. Measured as the
+  coefficient of variation (std_dev / mean) of sentence word counts, inverted:
+  low CV (uniform) → high score.
+category: structure
+weight: 0.80
+detection_type: linguistic
+severity: high
+references:
+  - https://gptzero.me/faq
+  - https://arxiv.org/abs/2301.07867
+params:
+  metric: sentence_burstiness
+  threshold_low: 0.2   # inverted CV below 0.2 → score 0 (very bursty = human)
+  threshold_high: 0.7  # inverted CV above 0.7 → score 1 (very uniform = AI)

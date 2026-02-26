@@ -1,4 +1,5 @@
 id: formal_register
+version: 1
 name: Formal Register Vocabulary
 description: >
   AI models default to formal vocabulary even in casual contexts. Words like

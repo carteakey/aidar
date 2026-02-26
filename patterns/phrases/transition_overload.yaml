@@ -1,0 +1,42 @@
+id: transition_overload
+name: Transition Word Overload
+description: >
+  AI models use paragraph-linking transition words ("furthermore", "moreover",
+  "additionally", "however", "nevertheless", "consequently") at much higher
+  rates than human writing. These words signal the model is following a
+  formulaic essay structure. Different from formal_register in that it focuses
+  specifically on connective transitions rather than generally formal vocabulary.
+category: phrases
+weight: 0.70
+version: 1
+detection_type: frequency
+severity: medium
+params:
+  terms:
+    - "furthermore"
+    - "moreover"
+    - "additionally"
+    - "however"
+    - "nevertheless"
+    - "nonetheless"
+    - "consequently"
+    - "subsequently"
+    - "in addition"
+    - "in contrast"
+    - "on the other hand"
+    - "that being said"
+    - "having said that"
+    - "with that in mind"
+    - "it is worth mentioning"
+    - "it is also worth"
+    - "as a result"
+    - "for instance"
+    - "for example"
+    - "to illustrate"
+    - "in other words"
+    - "put differently"
+    - "to put it another way"
+  match_mode: contains
+  per_n_words: 1000
+  threshold_low: 3.0
+  threshold_high: 20.0

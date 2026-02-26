@@ -12,6 +12,7 @@ class PatternResult:
     normalized_score: float
     weight: float
     label: str
+    pattern_version: int = 1
 
 
 @dataclass

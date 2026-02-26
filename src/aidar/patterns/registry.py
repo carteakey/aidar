@@ -3,6 +3,7 @@ from __future__ import annotations
 from aidar.models.pattern import PatternDef
 from aidar.patterns.detectors.base import BaseDetector
 from aidar.patterns.detectors.frequency_detector import FrequencyDetector
+from aidar.patterns.detectors.linguistic_detector import LinguisticDetector
 from aidar.patterns.detectors.regex_detector import RegexDetector
 from aidar.patterns.detectors.structural_detector import StructuralDetector
 
@@ -10,6 +11,7 @@ _DETECTOR_MAP: dict[str, type[BaseDetector]] = {
     "regex": RegexDetector,
     "frequency": FrequencyDetector,
     "structural": StructuralDetector,
+    "linguistic": LinguisticDetector,
 }
 
 

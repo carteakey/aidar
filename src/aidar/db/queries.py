@@ -47,12 +47,13 @@ def store_result(conn: sqlite3.Connection, result: AggregateResult) -> int:
     # Delete old pattern scores for this scan (in case of update)
     conn.execute("DELETE FROM pattern_scores WHERE scan_id = ?", (scan_id,))
 
-    # Insert fresh pattern scores
+    # Insert fresh pattern scores with version
     conn.executemany(
-        "INSERT INTO pattern_scores (scan_id, pattern_id, category, raw_value, norm_score) "
-        "VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO pattern_scores "
+        "(scan_id, pattern_id, category, raw_value, norm_score, pattern_version) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
         [
-            (scan_id, r.pattern_id, r.category, r.raw_value, r.normalized_score)
+            (scan_id, r.pattern_id, r.category, r.raw_value, r.normalized_score, r.pattern_version)
             for r in result.score_vector.pattern_results
         ],
     )
@@ -120,6 +121,50 @@ def get_pattern_stats(conn: sqlite3.Connection) -> list[dict]:
 def url_already_scanned(conn: sqlite3.Connection, url: str) -> bool:
     row = conn.execute("SELECT id FROM scans WHERE url = ?", (url,)).fetchone()
     return row is not None
+
+
+def get_stale_urls(
+    conn: sqlite3.Connection,
+    current_versions: dict[str, int],
+    domain: str | None = None,
+) -> list[str]:
+    """
+    Return URLs whose pattern scores were computed with an older pattern version.
+    current_versions: dict of {pattern_id: current_version} from the loaded registry.
+    If domain is set, only checks that domain.
+    """
+    stale: set[str] = set()
+    for pattern_id, current_version in current_versions.items():
+        query = """
+            SELECT DISTINCT s.url
+            FROM scans s
+            JOIN pattern_scores ps ON ps.scan_id = s.id
+            WHERE ps.pattern_id = ?
+              AND ps.pattern_version < ?
+              AND s.url IS NOT NULL
+        """
+        params: list = [pattern_id, current_version]
+        if domain:
+            query += " AND s.domain = ?"
+            params.append(domain)
+        rows = conn.execute(query, params).fetchall()
+        stale.update(r["url"] for r in rows)
+    return sorted(stale)
+
+
+def get_pattern_version_summary(conn: sqlite3.Connection) -> list[dict]:
+    """Show which pattern versions are stored in the DB vs what's loaded."""
+    rows = conn.execute(
+        """
+        SELECT pattern_id,
+               MAX(pattern_version) as max_stored_version,
+               COUNT(DISTINCT scan_id) as scan_count
+        FROM pattern_scores
+        GROUP BY pattern_id
+        ORDER BY pattern_id
+        """
+    ).fetchall()
+    return [dict(row) for row in rows]
 
 
 def get_domain_scans(

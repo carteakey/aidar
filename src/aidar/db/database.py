@@ -18,12 +18,13 @@ CREATE TABLE IF NOT EXISTS scans (
 );
 
 CREATE TABLE IF NOT EXISTS pattern_scores (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    scan_id     INTEGER NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
-    pattern_id  TEXT NOT NULL,
-    category    TEXT NOT NULL,
-    raw_value   REAL,
-    norm_score  REAL
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    scan_id         INTEGER NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
+    pattern_id      TEXT NOT NULL,
+    category        TEXT NOT NULL,
+    raw_value       REAL,
+    norm_score      REAL,
+    pattern_version INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_scans_domain ON scans(domain);
@@ -39,5 +40,17 @@ def get_connection(db_path: str | Path = "aidar.db") -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.executescript(SCHEMA)
+    _migrate(conn)
     conn.commit()
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Apply additive schema migrations for existing databases."""
+    existing_cols = {
+        row[1] for row in conn.execute("PRAGMA table_info(pattern_scores)").fetchall()
+    }
+    if "pattern_version" not in existing_cols:
+        conn.execute(
+            "ALTER TABLE pattern_scores ADD COLUMN pattern_version INTEGER NOT NULL DEFAULT 1"
+        )

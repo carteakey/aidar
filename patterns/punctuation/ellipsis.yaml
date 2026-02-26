@@ -1,4 +1,5 @@
 id: ellipsis_overuse
+version: 1
 name: Ellipsis Overuse
 description: >
   AI-generated text sometimes uses ellipses excessively to imply depth or

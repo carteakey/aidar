@@ -1,4 +1,5 @@
 id: rare_word_density
+version: 1
 name: Rare/Sophisticated Word Density
 description: >
   AI models often insert unnecessarily sophisticated vocabulary to appear

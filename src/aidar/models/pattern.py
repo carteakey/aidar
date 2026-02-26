@@ -17,6 +17,7 @@ class PatternDef:
     weight: float
     detection_type: str
     params: dict[str, Any]
+    version: int = 1          # bump when thresholds or detection logic changes
     severity: str = "medium"
     references: list[str] = field(default_factory=list)
     added_by: str = ""

@@ -1,4 +1,5 @@
 id: bullet_point_density
+version: 1
 name: Excessive Bullet Point Density
 description: >
   AI-generated content defaults to bullet lists to simulate "organized" writing

@@ -1,4 +1,5 @@
 id: em_dash_overuse
+version: 1
 name: Em Dash Overuse
 description: >
   AI models, particularly Claude and GPT-4, frequently substitute em dashes for

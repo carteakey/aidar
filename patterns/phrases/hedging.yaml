@@ -1,4 +1,5 @@
 id: hedging_phrases
+version: 1
 name: Hedging Language Cluster
 description: >
   LLMs systematically hedge assertions with qualifiers like "it's worth noting",

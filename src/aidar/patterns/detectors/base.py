@@ -39,4 +39,5 @@ class BaseDetector(ABC):
             normalized_score=self._normalize(raw),
             weight=self.pattern.weight,
             label=label,
+            pattern_version=self.pattern.version,
         )

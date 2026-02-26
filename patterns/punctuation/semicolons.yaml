@@ -1,4 +1,5 @@
 id: semicolon_overuse
+version: 1
 name: Semicolon Overuse
 description: >
   Some AI models overuse semicolons to connect related clauses, producing a

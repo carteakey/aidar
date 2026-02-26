@@ -95,6 +95,7 @@ def _parse_pattern(data: dict, source: Path) -> PatternDef:
             weight=float(data["weight"]),
             detection_type=str(data["detection_type"]),
             params=dict(data["params"]),
+            version=int(data.get("version", 1)),
             severity=str(data.get("severity", "medium")),
             references=list(data.get("references", [])),
             added_by=str(data.get("added_by", "")),

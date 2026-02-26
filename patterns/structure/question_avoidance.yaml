@@ -1,0 +1,18 @@
+id: question_avoidance
+name: Question Avoidance
+version: 1
+description: >
+  Human writers ask questions — rhetorical, direct, conversational. AI-generated
+  text almost never asks questions; it answers them. Near-zero question rates in
+  long-form text are a meaningful signal. Measured as fraction of sentences
+  ending with '?', inverted: low question rate → high score.
+  Note: technical/instructional content naturally has fewer questions — weight
+  this lower for documentation-style content.
+category: structure
+weight: 0.55
+detection_type: linguistic
+severity: medium
+params:
+  metric: question_rate
+  threshold_low: 0.0    # used internally; actual scoring is in the detector
+  threshold_high: 0.15  # >15% questions → fully human-like → score 0

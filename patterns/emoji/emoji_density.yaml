@@ -1,4 +1,5 @@
 id: emoji_density
+version: 1
 name: Emoji Density
 description: >
   Some AI models (particularly GPT-4 in certain system prompt configurations)

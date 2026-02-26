@@ -1,4 +1,5 @@
 id: paragraph_uniformity
+version: 1
 name: Paragraph Length Uniformity
 description: >
   Human writers vary paragraph length naturally. AI output tends to produce
