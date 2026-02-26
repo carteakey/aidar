@@ -6,11 +6,10 @@
 #   LITESTREAM_BUCKET            S3 bucket name
 #   LITESTREAM_ACCESS_KEY_ID     Access key (AWS/R2/B2)
 #   LITESTREAM_SECRET_ACCESS_KEY Secret key
-#
-# Optional:
 #   LITESTREAM_ENDPOINT          S3-compatible endpoint URL
 #                                  Cloudflare R2: https://<account>.r2.cloudflarestorage.com
-#                                  Backblaze B2:  https://s3.<region>.backblazeb2.com
+#
+# Optional:
 #   LITESTREAM_VERSION           Binary version to download (default: 0.3.13)
 #   AIDAR_DB                     DB file path (default: aidar.db)
 
@@ -18,9 +17,9 @@ set -euo pipefail
 
 LITESTREAM_VERSION="${LITESTREAM_VERSION:-0.3.13}"
 LITESTREAM_BIN="/tmp/litestream"
-DB_PATH="${AIDAR_DB:-aidar.db}"
+export AIDAR_DB="${AIDAR_DB:-aidar.db}"
 
-# ── Download litestream binary (cached in /tmp across warm restarts) ──────────
+# ── Download litestream binary ────────────────────────────────────────────────
 if [ ! -x "$LITESTREAM_BIN" ]; then
   echo "[litestream] Downloading v${LITESTREAM_VERSION}..."
   curl -fsSL \
@@ -29,28 +28,20 @@ if [ ! -x "$LITESTREAM_BIN" ]; then
   chmod +x "$LITESTREAM_BIN"
 fi
 
-# ── If no bucket configured, run plain uvicorn (local / CI) ──────────────────
+# ── If no bucket configured, run plain uvicorn (local dev) ────────────────────
 if [ -z "${LITESTREAM_BUCKET:-}" ]; then
-  echo "[litestream] LITESTREAM_BUCKET not set — running without replication (ephemeral DB)."
+  echo "[litestream] LITESTREAM_BUCKET not set — running without replication."
   exec uvicorn web.main:app --host 0.0.0.0 --port "$PORT"
 fi
 
-# Build replica URL  (s3://bucket/path  or  s3://bucket/path?endpoint=...)
-REPLICA_URL="s3://${LITESTREAM_BUCKET}/aidar.db"
-if [ -n "${LITESTREAM_ENDPOINT:-}" ]; then
-  REPLICA_URL="${REPLICA_URL}?endpoint=${LITESTREAM_ENDPOINT}"
-fi
-
-export AWS_ACCESS_KEY_ID="${LITESTREAM_ACCESS_KEY_ID}"
-export AWS_SECRET_ACCESS_KEY="${LITESTREAM_SECRET_ACCESS_KEY}"
-
-# ── Restore DB on cold start ──────────────────────────────────────────────────
-echo "[litestream] Restoring ${DB_PATH} from ${REPLICA_URL} ..."
-"$LITESTREAM_BIN" restore -if-no-db -o "$DB_PATH" "$REPLICA_URL" \
+# ── Restore DB on cold start (-if-replica-exists = skip silently if no remote) ──
+echo "[litestream] Restoring ${AIDAR_DB} from replica..."
+"$LITESTREAM_BIN" restore -config litestream.yml -if-replica-exists "$AIDAR_DB" \
   && echo "[litestream] Restore complete." \
-  || echo "[litestream] No existing replica found — starting fresh."
+  || echo "[litestream] No existing replica — starting fresh."
 
-# ── Run app with continuous replication ───────────────────────────────────────
-echo "[litestream] Starting with continuous replication → ${REPLICA_URL}"
-exec "$LITESTREAM_BIN" replicate "$DB_PATH" "$REPLICA_URL" -- \
-  uvicorn web.main:app --host 0.0.0.0 --port "$PORT"
+# ── Run app with continuous replication via -exec ─────────────────────────────
+echo "[litestream] Starting with continuous replication..."
+exec "$LITESTREAM_BIN" replicate -config litestream.yml \
+  -exec "uvicorn web.main:app --host 0.0.0.0 --port $PORT"
+
