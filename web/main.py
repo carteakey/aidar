@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import os
+import time
 from pathlib import Path
 
 import httpx
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -34,6 +36,9 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 # scans are written to an ephemeral SQLite and won't survive a dyno restart.
 # Add DATABASE_URL (Heroku Postgres) to make web-triggered scans persistent.
 _scan_status: dict[str, str] = {}
+_scan_last_completed: dict[str, float] = {}  # domain → unix timestamp
+
+RATE_LIMIT_SECONDS = 60 * 60 * 6  # 6 hours between web-triggered rescans
 
 # Lazy-loaded analyzer singleton (loaded once at first scan request)
 _analyzer = None
@@ -58,7 +63,7 @@ def _get_analyzer():
     return _analyzer, _analyzer_config
 
 
-async def _run_domain_scan(domain: str, limit: int = 50) -> None:
+async def _run_domain_scan(domain: str, limit: int = 200) -> None:
     """Background task: discover → filter → scan → store results for a domain."""
     from urllib.parse import urlparse
 
@@ -131,6 +136,7 @@ async def _run_domain_scan(domain: str, limit: int = 50) -> None:
                 store_result(conn, r)
 
         _scan_status[domain] = "done"
+        _scan_last_completed[domain] = time.time()
     except Exception:
         _scan_status[domain] = "error"
 
@@ -160,18 +166,42 @@ async def index(request: Request, q: str = ""):
 
 @app.post("/submit", response_class=HTMLResponse)
 async def submit_site(request: Request, background_tasks: BackgroundTasks):
+    from fastapi.responses import RedirectResponse
+
     form = await request.form()
     domain = str(form.get("domain", "")).strip().lstrip("https://").lstrip("http://").rstrip("/")
     if not domain:
+        conn = get_conn()
         return templates.TemplateResponse(
             "index.html",
-            {"request": request, "leaderboard": [], "stats": {}, "submit_error": "Enter a domain."},
+            {"request": request, "leaderboard": get_domain_leaderboard(conn, limit=100),
+             "stats": get_global_stats(conn), "submit_error": "Enter a domain."},
         )
-    # Kick off a background scan if not already in flight
-    if _scan_status.get(domain) not in ("queued", "running"):
-        _scan_status[domain] = "queued"
-        background_tasks.add_task(_run_domain_scan, domain)
-    from fastapi.responses import RedirectResponse
+
+    # Rate limit: already in flight?
+    if _scan_status.get(domain) in ("queued", "running"):
+        return RedirectResponse(url=f"/domain/{domain}", status_code=303)
+
+    # Rate limit: scanned too recently (in-memory)
+    last = _scan_last_completed.get(domain, 0)
+    if time.time() - last < RATE_LIMIT_SECONDS:
+        return RedirectResponse(url=f"/domain/{domain}", status_code=303)
+
+    # Rate limit: check DB for recent scan (survives dyno restarts)
+    conn = get_conn()
+    stats = get_domain_stats(conn, domain)
+    if stats.get("latest"):
+        try:
+            from datetime import datetime, timezone
+            latest_dt = datetime.fromisoformat(stats["latest"].replace("Z", "+00:00"))
+            age_s = (datetime.now(timezone.utc) - latest_dt).total_seconds()
+            if age_s < RATE_LIMIT_SECONDS:
+                return RedirectResponse(url=f"/domain/{domain}", status_code=303)
+        except Exception:
+            pass
+
+    _scan_status[domain] = "queued"
+    background_tasks.add_task(_run_domain_scan, domain)
     return RedirectResponse(url=f"/domain/{domain}", status_code=303)
 
 
@@ -293,3 +323,80 @@ async def badge(domain: str):
 </svg>"""
     return Response(content=svg, media_type="image/svg+xml",
                     headers={"Cache-Control": "max-age=3600"})
+
+
+@app.get("/og/{domain:path}")
+async def og_image(domain: str):
+    """1200×630 Open Graph preview image for a domain."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    W, H = 1200, 630
+    BG = (10, 10, 10)
+    FG = (212, 212, 212)
+    DIM = (102, 102, 102)
+    GREEN = (74, 222, 128)
+    YELLOW = (250, 204, 21)
+    RED = (248, 113, 113)
+
+    conn = get_conn()
+    stats = get_domain_stats(conn, domain)
+    avg = stats.get("avg_score", 0) if stats.get("scans", 0) else None
+
+    img = Image.new("RGB", (W, H), BG)
+    draw = ImageDraw.Draw(img)
+
+    # Try to load a decent font; fall back to default
+    try:
+        font_big = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 96)
+        font_med = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 36)
+        font_sm = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 24)
+    except Exception:
+        font_big = ImageFont.load_default(size=96)
+        font_med = ImageFont.load_default(size=36)
+        font_sm = ImageFont.load_default(size=24)
+
+    # Top-left brand
+    draw.text((60, 50), "aidar.lol", font=font_sm, fill=GREEN)
+
+    # Domain name (centered, possibly truncated)
+    disp_domain = domain if len(domain) <= 30 else domain[:28] + "…"
+    bbox = draw.textbbox((0, 0), disp_domain, font=font_med)
+    dw = bbox[2] - bbox[0]
+    draw.text(((W - dw) // 2, 180), disp_domain, font=font_med, fill=FG)
+
+    # Score (big, centered)
+    if avg is not None:
+        score_text = str(int(avg))
+        color = RED if avg >= 65 else (YELLOW if avg >= 35 else GREEN)
+        bbox2 = draw.textbbox((0, 0), score_text, font=font_big)
+        sw = bbox2[2] - bbox2[0]
+        draw.text(((W - sw) // 2, 270), score_text, font=font_big, fill=color)
+
+        # Label below score
+        label = "LIKELY AI" if avg >= 65 else ("MIXED SIGNALS" if avg >= 35 else "MOSTLY HUMAN")
+        bbox3 = draw.textbbox((0, 0), label, font=font_sm)
+        lw2 = bbox3[2] - bbox3[0]
+        draw.text(((W - lw2) // 2, 390), label, font=font_sm, fill=color)
+
+        scans = stats.get("scans", 0)
+        sub_text = f"avg ai index across {scans} pages"
+        bbox4 = draw.textbbox((0, 0), sub_text, font=font_sm)
+        sw2 = bbox4[2] - bbox4[0]
+        draw.text(((W - sw2) // 2, 440), sub_text, font=font_sm, fill=DIM)
+    else:
+        msg = "not yet scanned"
+        bbox2 = draw.textbbox((0, 0), msg, font=font_med)
+        mw = bbox2[2] - bbox2[0]
+        draw.text(((W - mw) // 2, 300), msg, font=font_med, fill=DIM)
+
+    # Bottom tagline
+    tagline = "// is the internet writing itself yet?"
+    bbox5 = draw.textbbox((0, 0), tagline, font=font_sm)
+    tw = bbox5[2] - bbox5[0]
+    draw.text(((W - tw) // 2, 560), tagline, font=font_sm, fill=DIM)
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG", optimize=True)
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="image/png",
+                             headers={"Cache-Control": "max-age=3600"})

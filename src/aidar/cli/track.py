@@ -17,7 +17,7 @@ from aidar.output.renderer import console
 @click.argument("domain")
 @click.option(
     "--limit",
-    default=50,
+    default=100,
     show_default=True,
     help="Max pages to scan per run",
 )

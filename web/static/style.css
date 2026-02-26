@@ -314,3 +314,20 @@ footer a:hover { color: var(--fg); }
   margin-bottom: 0.5rem;
   color: var(--fg-dimmer);
 }
+
+/* ── Share button ──────────────────────────── */
+.share-btn {
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--fg-dim);
+  font-size: 0.8rem;
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s;
+}
+.share-btn:hover {
+  border-color: var(--fg-dim);
+  color: var(--fg);
+  text-decoration: none;
+}

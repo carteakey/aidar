@@ -1,6 +1,24 @@
 {% extends "base.html" %}
 {% block title %}{{ domain }} — aidar.lol{% endblock %}
 
+{% set score = stats.avg_score | int %}
+{% if score >= 65 %}{% set og_label = "LIKELY AI" %}
+{% elif score >= 35 %}{% set og_label = "MIXED SIGNALS" %}
+{% else %}{% set og_label = "MOSTLY HUMAN" %}{% endif %}
+
+{% block head %}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="aidar.lol">
+<meta property="og:title" content="{{ domain }} scores {{ score }}/100 on aidar.lol">
+<meta property="og:description" content="{{ og_label }} — {{ stats.scans }} pages scanned. Track AI-era stylistic drift across the web.">
+<meta property="og:image" content="https://aidar.lol/og/{{ domain }}">
+<meta property="og:url" content="https://aidar.lol/domain/{{ domain }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ domain }} scores {{ score }}/100 on aidar.lol">
+<meta name="twitter:description" content="{{ og_label }} — {{ stats.scans }} pages scanned. Is the internet writing itself yet?">
+<meta name="twitter:image" content="https://aidar.lol/og/{{ domain }}">
+{% endblock %}
+
 {% block content %}
 
 <div class="domain-hero">
@@ -14,6 +32,14 @@
       top {{ ((1 - percentile) * 100) | int }}% of corpus
     </span>
     {% endif %}
+  </div>
+  <div class="domain-actions" style="margin-top:0.75rem; display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+    <a class="share-btn"
+       href="https://x.com/intent/tweet?text={{ domain }}+scores+{{ score }}%2F100+on+aidar.lol+%E2%80%94+{{ og_label | urlencode }}&url=https%3A%2F%2Fairdar.lol%2Fdomain%2F{{ domain | urlencode }}&via=carteakey"
+       target="_blank" rel="noopener">↗ share on X</a>
+    <span class="c-dim" style="font-size:0.75rem">embed:
+      <code style="font-size:0.7rem; color:var(--fg-dim)">![aidar](https://aidar.lol/badge/{{ domain }})</code>
+    </span>
   </div>
 </div>
 
