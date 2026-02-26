@@ -1,0 +1,41 @@
+id: hedging_phrases
+name: Hedging Language Cluster
+description: >
+  LLMs systematically hedge assertions with qualifiers like "it's worth noting",
+  "it's important to", "certainly", "absolutely", and "of course" at much higher
+  density than human writing. These phrases function as politeness scaffolding
+  baked into RLHF training, making the model appear cautious and helpful.
+category: phrases
+weight: 0.90
+detection_type: frequency
+severity: high
+params:
+  terms:
+    - "it's worth noting"
+    - "it is worth noting"
+    - "it's important to note"
+    - "it is important to note"
+    - "it's important to"
+    - "it is important to"
+    - "certainly"
+    - "absolutely"
+    - "of course"
+    - "needless to say"
+    - "it goes without saying"
+    - "as you can see"
+    - "i'd be happy to"
+    - "i would be happy to"
+    - "feel free to"
+    - "don't hesitate to"
+    - "please note that"
+    - "it should be noted"
+    - "it's crucial to"
+    - "it is crucial to"
+    - "rest assured"
+    - "without a doubt"
+    - "undoubtedly"
+    - "importantly"
+  match_mode: contains
+  per_n_words: 1000
+  threshold_low: 1.5
+  threshold_high: 12.0

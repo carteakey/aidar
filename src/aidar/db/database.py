@@ -1,0 +1,43 @@
+from __future__ import annotations
+
+import sqlite3
+from pathlib import Path
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS scans (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    url         TEXT,
+    domain      TEXT,
+    file_path   TEXT,
+    word_count  INTEGER,
+    score       INTEGER,
+    label       TEXT,
+    score_json  TEXT,
+    scanned_at  TEXT,
+    UNIQUE(url)
+);
+
+CREATE TABLE IF NOT EXISTS pattern_scores (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    scan_id     INTEGER NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
+    pattern_id  TEXT NOT NULL,
+    category    TEXT NOT NULL,
+    raw_value   REAL,
+    norm_score  REAL
+);
+
+CREATE INDEX IF NOT EXISTS idx_scans_domain ON scans(domain);
+CREATE INDEX IF NOT EXISTS idx_scans_score ON scans(score DESC);
+CREATE INDEX IF NOT EXISTS idx_pattern_scores_scan ON pattern_scores(scan_id);
+"""
+
+
+def get_connection(db_path: str | Path = "aidar.db") -> sqlite3.Connection:
+    """Open (or create) the SQLite database and ensure schema exists."""
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
+    conn.executescript(SCHEMA)
+    conn.commit()
+    return conn

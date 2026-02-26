@@ -1,0 +1,16 @@
+id: semicolon_overuse
+name: Semicolon Overuse
+description: >
+  Some AI models overuse semicolons to connect related clauses, producing a
+  stilted academic tone. Most human casual prose uses 0-2 semicolons per 1000 words.
+  Heavy semicolon use alone is weak evidence but combines with other signals.
+category: punctuation
+weight: 0.30
+detection_type: regex
+severity: low
+params:
+  patterns:
+    - ";"
+  per_n_words: 1000
+  threshold_low: 2.0
+  threshold_high: 8.0

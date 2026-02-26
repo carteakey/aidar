@@ -1,0 +1,59 @@
+id: ai_idioms
+name: AI Vocabulary Idioms
+description: >
+  Certain phrases have become strongly associated with AI-generated text through
+  overuse in training data and model outputs. "Delve into", "deep dive", and
+  "key takeaway" are among the most reliably detectable. These phrases exist in
+  human writing but appear at disproportionate rates in LLM output.
+category: phrases
+weight: 0.85
+detection_type: frequency
+severity: high
+references:
+  - https://arxiv.org/abs/2403.05821
+params:
+  terms:
+    - "delve into"
+    - "delves into"
+    - "delving into"
+    - "deep dive"
+    - "dive deep"
+    - "key takeaway"
+    - "key takeaways"
+    - "at its core"
+    - "at the end of the day"
+    - "the bottom line"
+    - "game changer"
+    - "game-changer"
+    - "paradigm shift"
+    - "transformative"
+    - "cutting-edge"
+    - "state-of-the-art"
+    - "leverage"
+    - "utilize"
+    - "foster"
+    - "robust"
+    - "seamlessly"
+    - "streamline"
+    - "holistic"
+    - "synergy"
+    - "actionable insights"
+    - "actionable"
+    - "multifaceted"
+    - "nuanced"
+    - "it's a complex"
+    - "the landscape of"
+    - "in today's world"
+    - "in today's"
+    - "in the realm of"
+    - "the realm of"
+    - "tapestry"
+    - "testament to"
+    - "embark on"
+    - "navigating"
+    - "ever-evolving"
+    - "ever-changing"
+  match_mode: contains
+  per_n_words: 1000
+  threshold_low: 2.0
+  threshold_high: 15.0

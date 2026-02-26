@@ -1,0 +1,35 @@
+id: filler_openers
+name: Filler Opener Phrases
+description: >
+  AI models frequently open paragraphs and responses with filler phrases that
+  signal a structured, templated response. "In conclusion", "to summarize",
+  "overall", and "in essence" appear at the start of closing paragraphs at
+  abnormally high rates compared to human-written editorial content.
+category: phrases
+weight: 0.75
+detection_type: frequency
+severity: high
+params:
+  terms:
+    - "in conclusion"
+    - "to summarize"
+    - "in summary"
+    - "to sum up"
+    - "in essence"
+    - "overall"
+    - "ultimately"
+    - "in short"
+    - "in brief"
+    - "to put it simply"
+    - "put simply"
+    - "simply put"
+    - "to wrap up"
+    - "wrapping up"
+    - "in closing"
+    - "as a final note"
+    - "final thoughts"
+    - "to conclude"
+  match_mode: contains
+  per_n_words: 1000
+  threshold_low: 1.0
+  threshold_high: 8.0

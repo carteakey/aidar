@@ -1,0 +1,16 @@
+id: bullet_point_density
+name: Excessive Bullet Point Density
+description: >
+  AI-generated content defaults to bullet lists to simulate "organized" writing
+  regardless of whether the content warrants it. Human long-form prose rarely
+  exceeds 10-15% bullet-listed lines; AI output frequently reaches 30-60%.
+  Measured as the ratio of lines beginning with common bullet markers to total
+  non-empty lines.
+category: structure
+weight: 0.75
+detection_type: structural
+severity: medium
+params:
+  metric: bullet_density
+  threshold_low: 0.10   # <10% bullets → score 0
+  threshold_high: 0.45  # >45% bullets → score 1

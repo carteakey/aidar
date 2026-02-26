@@ -1,0 +1,16 @@
+id: emoji_density
+name: Emoji Density
+description: >
+  Some AI models (particularly GPT-4 in certain system prompt configurations)
+  sprinkle emojis liberally throughout text. This is uncommon in formal or
+  editorial human writing. High emoji density is a moderate signal; its
+  absence in otherwise AI-patterned text is also informative for model
+  identification (Claude rarely uses emoji).
+category: emoji
+weight: 0.70
+detection_type: structural
+severity: medium
+params:
+  metric: emoji_density
+  threshold_low: 0.001   # ~1 emoji per 1000 chars
+  threshold_high: 0.015  # ~15 emojis per 1000 chars

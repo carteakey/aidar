@@ -1,0 +1,24 @@
+model_id: gemini
+display_name: "Google Gemini (all versions)"
+description: >
+  Empirically observed pattern tendencies for Google Gemini family models.
+  Used in --compare-model mode to compute similarity distance.
+
+profile:
+  em_dash_overuse: 0.40
+  ellipsis_overuse: 0.30
+  semicolon_overuse: 0.40
+  hedging_phrases: 0.72
+  filler_openers: 0.75
+  ai_idioms: 0.78
+  bullet_point_density: 0.75
+  header_frequency: 0.75
+  paragraph_uniformity: 0.65
+  emoji_density: 0.35
+  formal_register: 0.68
+  rare_word_density: 0.60
+
+notes: >
+  Gemini has moderate scores across most categories. Highest emoji usage
+  among major models. Lower em dash usage than Claude. Profile is less
+  certain than Claude/GPT-4 profiles due to fewer data points.

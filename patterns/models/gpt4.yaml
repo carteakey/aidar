@@ -1,0 +1,24 @@
+model_id: gpt4
+display_name: "OpenAI GPT-4 / GPT-4o"
+description: >
+  Empirically observed pattern tendencies for GPT-4 and GPT-4o family models.
+  Used in --compare-model mode to compute similarity distance.
+
+profile:
+  em_dash_overuse: 0.55
+  ellipsis_overuse: 0.20
+  semicolon_overuse: 0.35
+  hedging_phrases: 0.78
+  filler_openers: 0.82
+  ai_idioms: 0.90
+  bullet_point_density: 0.85
+  header_frequency: 0.82
+  paragraph_uniformity: 0.70
+  emoji_density: 0.25
+  formal_register: 0.80
+  rare_word_density: 0.70
+
+notes: >
+  GPT-4 is the heaviest bullet point and header user. Higher emoji density
+  than Claude. Very heavy AI idiom usage ("delve into" is particularly
+  associated with GPT-4). Lower em dash usage than Claude.

@@ -1,0 +1,16 @@
+# Global category weights for aggregate scoring.
+# All weights must sum to 1.0.
+# Edit these to tune the scoring formula.
+
+weights:
+  phrases: 0.35       # Hedging language, AI idioms — strongest signal
+  punctuation: 0.25   # Em dashes, ellipsis overuse
+  structure: 0.20     # Bullet density, header frequency
+  vocabulary: 0.10    # Formal register, rare word density
+  emoji: 0.10         # Emoji frequency and placement
+
+# Score thresholds for human-readable labels
+thresholds:
+  likely_human_max: 30   # 0-30 → LIKELY HUMAN
+  likely_ai_min: 65      # 65-100 → LIKELY AI
+                         # 31-64 → UNCERTAIN

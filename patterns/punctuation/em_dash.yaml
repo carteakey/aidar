@@ -1,0 +1,21 @@
+id: em_dash_overuse
+name: Em Dash Overuse
+description: >
+  AI models, particularly Claude and GPT-4, frequently substitute em dashes for
+  commas, colons, or parentheses at rates far above typical human editorial prose.
+  Human writers average roughly 0-2 em dashes per 1000 words outside stylized
+  journalism; AI output commonly exceeds 6-12.
+category: punctuation
+weight: 0.85
+detection_type: regex
+severity: high
+references:
+  - https://www.marginalia.nu/weird-ai-crap/hn/
+params:
+  patterns:
+    - "\u2014"    # Unicode em dash U+2014
+    - "\u2013"    # En dash U+2013 (also overused)
+    - " -- "      # ASCII double-hyphen with spaces
+  per_n_words: 1000
+  threshold_low: 2.0    # Below this → score 0 (normal human usage)
+  threshold_high: 10.0  # Above this → score 1 (saturated)

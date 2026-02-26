@@ -1,0 +1,15 @@
+id: paragraph_uniformity
+name: Paragraph Length Uniformity
+description: >
+  Human writers vary paragraph length naturally. AI output tends to produce
+  paragraphs of suspiciously uniform length. Measured as the coefficient of
+  variation (std_dev / mean) of paragraph word counts — lower values indicate
+  more robotic uniformity. Inverted: lower CV = higher AI signal.
+category: structure
+weight: 0.50
+detection_type: structural
+severity: low
+params:
+  metric: paragraph_cv_inverted
+  threshold_low: 0.2   # CV > 0.8 (diverse) → score 0
+  threshold_high: 0.8  # CV < 0.2 (uniform) → score 1

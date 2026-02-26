@@ -1,0 +1,17 @@
+id: ellipsis_overuse
+name: Ellipsis Overuse
+description: >
+  AI-generated text sometimes uses ellipses excessively to imply depth or
+  trailing thought, particularly in informal contexts. Human writers typically
+  use 0-1 ellipses per 1000 words in editorial prose.
+category: punctuation
+weight: 0.40
+detection_type: regex
+severity: low
+params:
+  patterns:
+    - "\u2026"         # Unicode ellipsis character U+2026
+    - "\\.\\.\\."     # Three literal dots
+  per_n_words: 1000
+  threshold_low: 1.0
+  threshold_high: 6.0

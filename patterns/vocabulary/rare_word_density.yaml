@@ -1,0 +1,45 @@
+id: rare_word_density
+name: Rare/Sophisticated Word Density
+description: >
+  AI models often insert unnecessarily sophisticated vocabulary to appear
+  erudite. Words like "elucidate", "juxtaposition", "intricate", "meticulous",
+  and "comprehensive" appear far more often in AI text than in equivalent
+  human web writing on the same topics.
+category: vocabulary
+weight: 0.55
+detection_type: frequency
+severity: medium
+params:
+  terms:
+    - "elucidate"
+    - "elucidates"
+    - "juxtaposition"
+    - "intricate"
+    - "meticulous"
+    - "meticulously"
+    - "comprehensive"
+    - "comprehensively"
+    - "paramount"
+    - "pivotal"
+    - "imperative"
+    - "expedite"
+    - "cognizant"
+    - "discern"
+    - "discerning"
+    - "permeate"
+    - "permeating"
+    - "underscore"
+    - "underscores"
+    - "underscore the importance"
+    - "myriad"
+    - "plethora"
+    - "amalgamation"
+    - "underpinning"
+    - "underpinnings"
+    - "contextualize"
+    - "encapsulate"
+    - "encapsulates"
+  match_mode: exact
+  per_n_words: 1000
+  threshold_low: 1.5
+  threshold_high: 8.0

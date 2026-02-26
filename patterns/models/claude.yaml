@@ -1,0 +1,26 @@
+model_id: claude
+display_name: "Anthropic Claude (all versions)"
+description: >
+  Empirically observed pattern tendencies for Claude family models (claude-3-opus,
+  claude-3.5-sonnet, claude-sonnet-4). Used in --compare-model mode to compute
+  similarity distance. Values are normalized pattern scores (0.0-1.0).
+
+profile:
+  em_dash_overuse: 0.92
+  ellipsis_overuse: 0.15
+  semicolon_overuse: 0.45
+  hedging_phrases: 0.88
+  filler_openers: 0.70
+  ai_idioms: 0.82
+  bullet_point_density: 0.65
+  header_frequency: 0.70
+  paragraph_uniformity: 0.60
+  emoji_density: 0.03
+  formal_register: 0.75
+  rare_word_density: 0.65
+
+notes: >
+  Claude is the strongest em dash user among major LLMs. Emoji usage is
+  near-zero. High hedging and AI idiom usage. Moderate bullet density
+  (less extreme than GPT-4-turbo). Profile is observational — update as
+  model behavior changes across versions.

@@ -1,0 +1,35 @@
+id: formal_register
+name: Formal Register Vocabulary
+description: >
+  AI models default to formal vocabulary even in casual contexts. Words like
+  "furthermore", "moreover", "nevertheless", "consequently", and "henceforth"
+  appear at elevated rates. Human casual web writing rarely uses these.
+category: vocabulary
+weight: 0.65
+detection_type: frequency
+severity: medium
+params:
+  terms:
+    - "furthermore"
+    - "moreover"
+    - "nevertheless"
+    - "nonetheless"
+    - "consequently"
+    - "subsequently"
+    - "henceforth"
+    - "thereby"
+    - "therein"
+    - "aforementioned"
+    - "aforementioned"
+    - "thus"
+    - "hence"
+    - "whereby"
+    - "notwithstanding"
+    - "heretofore"
+    - "inasmuch"
+    - "insofar"
+    - "pursuant to"
+  match_mode: exact
+  per_n_words: 1000
+  threshold_low: 2.0
+  threshold_high: 10.0

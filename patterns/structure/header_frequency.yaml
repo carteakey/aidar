@@ -1,0 +1,14 @@
+id: header_frequency
+name: Excessive Header Frequency
+description: >
+  AI content generators compulsively add headers to segment text, even for
+  short articles. A human 500-word blog post rarely needs more than 1-2
+  headers; AI often adds 4-8. Measured as headers per 1000 words.
+category: structure
+weight: 0.60
+detection_type: structural
+severity: medium
+params:
+  metric: header_ratio
+  threshold_low: 0.003  # ~3 headers per 1000 words
+  threshold_high: 0.015 # ~15 headers per 1000 words
