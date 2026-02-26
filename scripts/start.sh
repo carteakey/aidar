@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-LITESTREAM_VERSION="${LITESTREAM_VERSION:-0.3.13}"
+LITESTREAM_VERSION="${LITESTREAM_VERSION:-0.5.9}"
 LITESTREAM_BIN="/tmp/litestream"
 export AIDAR_DB="${AIDAR_DB:-aidar.db}"
 
@@ -23,7 +23,7 @@ export AIDAR_DB="${AIDAR_DB:-aidar.db}"
 if [ ! -x "$LITESTREAM_BIN" ]; then
   echo "[litestream] Downloading v${LITESTREAM_VERSION}..."
   curl -fsSL \
-    "https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/litestream-v${LITESTREAM_VERSION}-linux-amd64.tar.gz" \
+    "https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/litestream-${LITESTREAM_VERSION}-linux-x86_64.tar.gz" \
     | tar xz -C /tmp
   chmod +x "$LITESTREAM_BIN"
 fi
