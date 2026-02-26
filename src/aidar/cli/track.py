@@ -52,6 +52,13 @@ from aidar.output.renderer import console
     default=False,
     help="Re-scan URLs where any pattern version has been bumped since last scan",
 )
+@click.option(
+    "--skip-pattern",
+    "skip_patterns",
+    multiple=True,
+    default=(),
+    help="Skip URLs containing this substring (e.g. /tag/, /page/). Repeatable.",
+)
 @click.pass_context
 def track(
     ctx: click.Context,
@@ -62,6 +69,7 @@ def track(
     skip_existing: bool,
     source: str,
     rescan_stale: bool,
+    skip_patterns: tuple[str, ...],
 ) -> None:
     """Discover and scan all pages for a domain, save results to DB.
 
@@ -71,6 +79,8 @@ def track(
     Examples:
       aidar track carteakey.dev
       aidar track medium.com --limit 200 --concurrency 20
+      aidar track gwern.net --skip-pattern /doc/ --skip-pattern /doc
+      aidar track ainewsinternational.com --skip-pattern /tag/ --skip-pattern /page/
     """
     base_url = _normalize_domain(domain)
     domain_name = urlparse(base_url).netloc
@@ -91,6 +101,14 @@ def track(
         raise SystemExit(1)
 
     console.print(f"[dim]Discovered {len(urls)} URLs.[/dim]")
+
+    # Filter out non-article URLs (tag pages, pagination, author pages, etc.)
+    if skip_patterns:
+        before = len(urls)
+        urls = [u for u in urls if not any(p in u for p in skip_patterns)]
+        filtered = before - len(urls)
+        if filtered:
+            console.print(f"[dim]Filtered {filtered} URLs matching skip patterns.[/dim]")
 
     # Set up DB
     from aidar.db.database import get_connection

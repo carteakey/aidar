@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+import httpx
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -27,6 +29,88 @@ app = FastAPI(title="aidar.lol", docs_url=None, redoc_url=None)
 BASE_DIR = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
+
+# In-memory scan status (per-dyno). NOTE: on Heroku without Postgres,
+# scans are written to an ephemeral SQLite and won't survive a dyno restart.
+# Add DATABASE_URL (Heroku Postgres) to make web-triggered scans persistent.
+_scan_status: dict[str, str] = {}
+
+# Lazy-loaded analyzer singleton (loaded once at first scan request)
+_analyzer = None
+_analyzer_config = None
+
+
+def _get_analyzer():
+    global _analyzer, _analyzer_config
+    if _analyzer is None:
+        from aidar.core.analyzer import Analyzer
+        from aidar.models.config import AppConfig
+        from aidar.patterns.loader import load_patterns, load_weight_config
+        from aidar.patterns.registry import PatternRegistry
+
+        pd_env = os.environ.get("AIDAR_PATTERNS_DIR")
+        pd = Path(pd_env) if pd_env else Path(__file__).parent.parent / "patterns"
+        patterns = load_patterns(pd)
+        weights = load_weight_config(pd)
+        registry = PatternRegistry(patterns)
+        _analyzer = Analyzer(registry)
+        _analyzer_config = AppConfig(patterns_dir=str(pd), weights=weights)
+    return _analyzer, _analyzer_config
+
+
+async def _run_domain_scan(domain: str, limit: int = 50) -> None:
+    """Background task: discover → filter → scan → store results for a domain."""
+    from aidar.cli.discover import _from_rss, _from_sitemap, _normalize_domain
+    from aidar.core.fetcher import FetchError, fetch_url_async
+    from aidar.core.scorer import compute_aggregate
+    from aidar.db.queries import store_result, url_already_scanned
+
+    _scan_status[domain] = "running"
+    try:
+        base_url = _normalize_domain(domain)
+        urls = _from_sitemap(base_url) or _from_rss(base_url)
+        if not urls:
+            _scan_status[domain] = "error:no_urls"
+            return
+
+        # Filter common non-article URL patterns
+        skip = ("/tag/", "/page/", "/author/", "/category/")
+        urls = [u for u in urls if not any(p in u for p in skip)]
+
+        conn = get_conn()
+        urls = [u for u in urls if not url_already_scanned(conn, u)][:limit]
+        if not urls:
+            _scan_status[domain] = "done"
+            return
+
+        analyzer, config = _get_analyzer()
+        semaphore = asyncio.Semaphore(5)
+
+        async def _scan_one(url: str, client: httpx.AsyncClient):
+            async with semaphore:
+                try:
+                    fetch = await fetch_url_async(url, client)
+                    sv = analyzer.run(fetch.text, fetch.word_count)
+                    return compute_aggregate(
+                        sv, config,
+                        url=url,
+                        word_count=fetch.word_count,
+                        published_date=fetch.published_date,
+                        title=fetch.title,
+                    )
+                except Exception:
+                    return None
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            results = await asyncio.gather(*[_scan_one(u, client) for u in urls])
+
+        for r in results:
+            if r is not None:
+                store_result(conn, r)
+
+        _scan_status[domain] = "done"
+    except Exception:
+        _scan_status[domain] = "error"
 
 
 def get_conn():
@@ -53,7 +137,7 @@ async def index(request: Request, q: str = ""):
 
 
 @app.post("/submit", response_class=HTMLResponse)
-async def submit_site(request: Request):
+async def submit_site(request: Request, background_tasks: BackgroundTasks):
     form = await request.form()
     domain = str(form.get("domain", "")).strip().lstrip("https://").lstrip("http://").rstrip("/")
     if not domain:
@@ -61,7 +145,10 @@ async def submit_site(request: Request):
             "index.html",
             {"request": request, "leaderboard": [], "stats": {}, "submit_error": "Enter a domain."},
         )
-    # Redirect to domain page — scanning happens via CLI, not the web UI
+    # Kick off a background scan if not already in flight
+    if _scan_status.get(domain) not in ("queued", "running"):
+        _scan_status[domain] = "queued"
+        background_tasks.add_task(_run_domain_scan, domain)
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url=f"/domain/{domain}", status_code=303)
 
@@ -70,11 +157,13 @@ async def submit_site(request: Request):
 async def domain_page(request: Request, domain: str):
     conn = get_conn()
     stats = get_domain_stats(conn, domain)
+    scan_status = _scan_status.get(domain)
     if stats.get("scans", 0) == 0:
+        status_code = 200 if scan_status in ("queued", "running") else 404
         return templates.TemplateResponse(
             "domain_missing.html",
-            {"request": request, "domain": domain},
-            status_code=404,
+            {"request": request, "domain": domain, "scan_status": scan_status},
+            status_code=status_code,
         )
     scans = get_domain_scans(conn, domain, limit=100)
     trend = get_domain_trend(conn, domain)
@@ -129,3 +218,56 @@ async def api_domain(domain: str):
         raise HTTPException(status_code=404)
     scans = get_domain_scans(conn, domain)
     return {"stats": stats, "scans": scans}
+
+
+@app.get("/api/scan-status/{domain:path}")
+async def api_scan_status(domain: str):
+    return {"domain": domain, "status": _scan_status.get(domain, "unknown")}
+
+
+@app.get("/badge/{domain:path}")
+async def badge(domain: str):
+    """SVG badge for embedding: ![aidar](https://aidar.lol/badge/example.com)"""
+    conn = get_conn()
+    stats = get_domain_stats(conn, domain)
+
+    if stats.get("scans", 0) == 0:
+        right_text = "no data"
+        color = "#9f9f9f"
+    else:
+        avg = stats["avg_score"]
+        right_text = f"{avg}/100"
+        if avg >= 65:
+            color = "#e05d44"
+        elif avg >= 35:
+            color = "#dfb317"
+        else:
+            color = "#4c9"
+
+    left = "aidar"
+    lw = len(left) * 7 + 10   # approx pixel width of left label
+    rw = len(right_text) * 7 + 10
+    total = lw + rw
+    lx = lw // 2
+    rx = lw + rw // 2
+
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total}" height="20">
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <clipPath id="r"><rect width="{total}" height="20" rx="3" fill="#fff"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="{lw}" height="20" fill="#555"/>
+    <rect x="{lw}" width="{rw}" height="20" fill="{color}"/>
+    <rect width="{total}" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+    <text x="{lx}" y="15" fill="#010101" fill-opacity=".3">{left}</text>
+    <text x="{lx}" y="14">{left}</text>
+    <text x="{rx}" y="15" fill="#010101" fill-opacity=".3">{right_text}</text>
+    <text x="{rx}" y="14">{right_text}</text>
+  </g>
+</svg>"""
+    return Response(content=svg, media_type="image/svg+xml",
+                    headers={"Cache-Control": "max-age=3600"})
