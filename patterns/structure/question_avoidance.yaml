@@ -9,10 +9,11 @@ description: >
   Note: technical/instructional content naturally has fewer questions — weight
   this lower for documentation-style content.
 category: structure
-weight: 0.55
+weight: 0.20
 detection_type: linguistic
-severity: medium
+severity: low
 params:
   metric: question_rate
   threshold_low: 0.0    # used internally; actual scoring is in the detector
-  threshold_high: 0.15  # >15% questions → fully human-like → score 0
+  threshold_high: 0.08  # >8% questions → fully human-like → score 0
+  score_cap: 0.70       # max score capped — 0% questions is common in human technical writing

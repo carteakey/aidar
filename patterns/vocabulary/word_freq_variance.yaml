@@ -1,0 +1,26 @@
+id: word_freq_variance
+version: 1
+name: Vocabulary Predictability (Perplexity Proxy)
+description: >
+  AI language models generate text with a surprisingly narrow vocabulary frequency
+  distribution. They cluster in the mid-Zipf range (3–5), systematically avoiding
+  both ultra-common stopwords AND truly rare/specialist terms. Human writers —
+  especially technical authors — freely mix domain jargon (rare) with casual
+  connectives (common), producing higher variance in word frequency.
+
+  This metric computes the standard deviation of Zipf frequency scores across
+  content words (≥4 chars, alpha only). Low std_dev = narrow/predictable = AI-like.
+
+  Requires the `wordfreq` package (gracefully falls back to score=0 if absent).
+  Serves as a lightweight corpus-free perplexity proxy — no language model needed.
+category: vocabulary
+weight: 0.80
+detection_type: linguistic
+severity: medium
+references:
+  - https://arxiv.org/abs/2301.11305
+  - https://github.com/rspeer/wordfreq
+params:
+  metric: word_freq_variance
+  threshold_low: 0.70   # std below this → max score (very narrow vocabulary = AI)
+  threshold_high: 1.25  # std above this → score 0 (very diverse = human)

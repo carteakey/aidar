@@ -8,9 +8,9 @@ description: >
   coefficient of variation (std_dev / mean) of sentence word counts, inverted:
   low CV (uniform) → high score.
 category: structure
-weight: 0.80
+weight: 0.65
 detection_type: linguistic
-severity: high
+severity: medium
 references:
   - https://gptzero.me/faq
   - https://arxiv.org/abs/2301.07867

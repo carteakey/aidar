@@ -3,10 +3,10 @@
 # Edit these to tune the scoring formula.
 
 weights:
-  phrases: 0.35       # Hedging language, AI idioms — strongest signal
-  punctuation: 0.25   # Em dashes, ellipsis overuse
-  structure: 0.20     # Bullet density, header frequency
-  vocabulary: 0.10    # Formal register, rare word density
+  phrases: 0.40       # Hedging language, AI idioms — strongest signal
+  punctuation: 0.20   # Em dashes, ellipsis overuse
+  structure: 0.15     # Bullet density, header frequency (reduced — QA was dominating)
+  vocabulary: 0.15    # Formal register, rare word density
   emoji: 0.10         # Emoji frequency and placement
 
 # Score thresholds for human-readable labels.

@@ -7,6 +7,14 @@ from aidar.models.pattern import PatternDef
 from aidar.models.result import PatternResult
 from aidar.patterns.detectors.base import BaseDetector
 
+try:
+    from wordfreq import zipf_frequency
+    _WORDFREQ_AVAILABLE = True
+except ImportError:
+    _WORDFREQ_AVAILABLE = False
+
+_CONTENT_WORD_RE = re.compile(r'\b[a-z]{4,}\b')
+
 # Simple sentence splitter — handles ., !, ? followed by whitespace + capital
 _SENTENCE_RE = re.compile(r'(?<=[.!?])\s+(?=[A-Z"])')
 # Question detection
@@ -35,6 +43,8 @@ class LinguisticDetector(BaseDetector):
             return self._question_rate(text)
         elif metric == "avg_sentence_length":
             return self._avg_sentence_length(text)
+        elif metric == "word_freq_variance":
+            return self._word_freq_variance(text)
         else:
             raise ValueError(f"Unknown linguistic metric: {metric}")
 
@@ -87,6 +97,10 @@ class LinguisticDetector(BaseDetector):
         """
         Fraction of sentences ending with '?'. Near-zero in AI text.
         Score is INVERTED: low question rate → high AI score.
+
+        Capped at `score_cap` (default 0.70) because 0% questions is common in
+        human technical/tutorial writing — reserve the full 1.0 for when other
+        signals also fire. Weight is intentionally low (0.20).
         """
         sentences = _split_sentences(text)
         if not sentences:
@@ -96,8 +110,13 @@ class LinguisticDetector(BaseDetector):
         rate = questions / len(sentences)
 
         # Invert: low question rate → high score
-        inverted = max(0.0, 1.0 - (rate / max(self.pattern.params.get("threshold_high", 0.15), 0.001)))
+        inverted = max(0.0, 1.0 - (rate / max(self.pattern.params.get("threshold_high", 0.08), 0.001)))
         inverted = min(1.0, inverted)
+
+        # Apply score cap — 0% questions is ambiguous for technical content
+        cap = float(self.pattern.params.get("score_cap", 0.70))
+        inverted = min(inverted, cap)
+
         return self._make_result(inverted, f"{questions}/{len(sentences)} sentences are questions ({rate:.1%})")
 
     def _avg_sentence_length(self, text: str) -> PatternResult:
@@ -110,3 +129,72 @@ class LinguisticDetector(BaseDetector):
             return self._make_result(0.0, "no sentences")
         avg = statistics.mean(len(s.split()) for s in sentences)
         return self._make_result(avg, f"{avg:.1f} words/sentence avg")
+
+    def _word_freq_variance(self, text: str) -> PatternResult:
+        """
+        Vocabulary predictability via word frequency standard deviation.
+        Uses Zipf frequency scores (wordfreq library) for each content word.
+
+        AI models produce text with a NARROW frequency distribution — they cluster
+        in the mid-Zipf range (3–5), avoiding both very common stopwords and truly
+        rare domain-specific terms. Human technical writing has higher variance: it
+        mixes highly specialized rare words with everyday language.
+
+        Score is INVERTED: low std_dev (narrow, predictable) → high AI score.
+        Falls back gracefully if wordfreq is not installed.
+        """
+        if not _WORDFREQ_AVAILABLE:
+            return PatternResult(
+                pattern_id=self.pattern.id,
+                category=self.pattern.category,
+                raw_value=0.0,
+                normalized_score=0.0,
+                weight=self.pattern.weight,
+                label="wordfreq not installed",
+                pattern_version=self.pattern.version,
+            )
+
+        words = _CONTENT_WORD_RE.findall(text.lower())
+        if len(words) < 30:
+            return PatternResult(
+                pattern_id=self.pattern.id,
+                category=self.pattern.category,
+                raw_value=0.0,
+                normalized_score=0.0,
+                weight=self.pattern.weight,
+                label="too few content words",
+                pattern_version=self.pattern.version,
+            )
+
+        freqs = [zipf_frequency(w, "en") for w in words]
+        # Only include words known to the frequency list (zipf > 0)
+        freqs = [f for f in freqs if f > 0]
+        if len(freqs) < 20:
+            return PatternResult(
+                pattern_id=self.pattern.id,
+                category=self.pattern.category,
+                raw_value=0.0,
+                normalized_score=0.0,
+                weight=self.pattern.weight,
+                label="too few known words",
+                pattern_version=self.pattern.version,
+            )
+
+        std = statistics.stdev(freqs)
+
+        # Invert: low std (narrow vocabulary) → high score (AI-like)
+        # threshold_low = std below which score saturates at 1.0 (very predictable)
+        # threshold_high = std above which score drops to 0.0 (very diverse = human)
+        t_low = float(self.pattern.params.get("threshold_low", 0.70))
+        t_high = float(self.pattern.params.get("threshold_high", 1.25))
+        normalized = max(0.0, min(1.0, (t_high - std) / (t_high - t_low)))
+
+        return PatternResult(
+            pattern_id=self.pattern.id,
+            category=self.pattern.category,
+            raw_value=round(std, 4),
+            normalized_score=normalized,
+            weight=self.pattern.weight,
+            label=f"Zipf std={std:.3f} over {len(freqs)} content words",
+            pattern_version=self.pattern.version,
+        )
