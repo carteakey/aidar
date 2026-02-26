@@ -16,6 +16,7 @@ from fastapi.templating import Jinja2Templates
 from aidar.db.database import get_connection
 from aidar.db.queries import (
     get_corpus_percentile,
+    get_domain_extremes,
     get_domain_leaderboard,
     get_domain_scans,
     get_domain_stats,
@@ -206,7 +207,7 @@ async def submit_site(request: Request, background_tasks: BackgroundTasks):
 
 
 @app.get("/domain/{domain:path}", response_class=HTMLResponse)
-async def domain_page(request: Request, domain: str):
+async def domain_page(request: Request, domain: str, sort: str = "recent"):
     conn = get_conn()
     stats = get_domain_stats(conn, domain)
     scan_status = _scan_status.get(domain)
@@ -217,9 +218,11 @@ async def domain_page(request: Request, domain: str):
             {"request": request, "domain": domain, "scan_status": scan_status},
             status_code=status_code,
         )
-    scans = get_domain_scans(conn, domain, limit=100)
+    sort = sort if sort in ("recent", "highest", "lowest") else "recent"
+    scans = get_domain_scans(conn, domain, limit=200, sort=sort)
     trend = get_domain_trend(conn, domain)
     percentile = get_corpus_percentile(conn, int(stats.get("avg_score", 0)))
+    top_pages, bottom_pages = get_domain_extremes(conn, domain, n=5)
 
     for scan in scans:
         try:
@@ -236,6 +239,9 @@ async def domain_page(request: Request, domain: str):
             "scans": scans,
             "trend": trend,
             "percentile": percentile,
+            "top_pages": top_pages,
+            "bottom_pages": bottom_pages,
+            "sort": sort,
         },
     )
 

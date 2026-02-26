@@ -206,19 +206,36 @@ def get_domain_scans(
     conn: sqlite3.Connection,
     domain: str,
     limit: int = 100,
+    sort: str = "recent",  # "recent" | "highest" | "lowest"
 ) -> list[dict]:
-    """Return individual page scans for a domain, newest first."""
+    """Return individual page scans for a domain."""
+    order = {
+        "highest": "score DESC",
+        "lowest": "score ASC",
+    }.get(sort, "scanned_at DESC")
     rows = conn.execute(
-        """
+        f"""
         SELECT url, word_count, score, label, score_json, scanned_at
         FROM scans
         WHERE domain = ?
-        ORDER BY scanned_at DESC
+        ORDER BY {order}
         LIMIT ?
         """,
         (domain, limit),
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def get_domain_extremes(
+    conn: sqlite3.Connection,
+    domain: str,
+    n: int = 5,
+) -> tuple[list[dict], list[dict]]:
+    """Return (top_n highest scoring, top_n lowest scoring) pages for a domain."""
+    base = "SELECT url, word_count, score, label, scanned_at FROM scans WHERE domain = ? AND word_count > 100"
+    highest = [dict(r) for r in conn.execute(f"{base} ORDER BY score DESC LIMIT ?", (domain, n)).fetchall()]
+    lowest = [dict(r) for r in conn.execute(f"{base} ORDER BY score ASC LIMIT ?", (domain, n)).fetchall()]
+    return highest, lowest
 
 
 def get_global_stats(conn: sqlite3.Connection) -> dict:

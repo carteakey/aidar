@@ -137,8 +137,55 @@
 </div>
 {% endif %}
 
+{% if top_pages or bottom_pages %}
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-top:2rem;">
+
+  {% if top_pages %}
+  <div>
+    <div class="section-header"><span class="section-title">🔴 highest scoring pages</span></div>
+    {% for p in top_pages %}
+    {% set s = p.score %}
+    {% if s >= 65 %}{% set sc = "c-red" %}{% else %}{% set sc = "c-yellow" %}{% endif %}
+    <div style="display:flex; justify-content:space-between; align-items:baseline; padding:0.3rem 0; border-bottom:1px solid var(--border); gap:0.5rem;">
+      <a href="{{ p.url }}" target="_blank" style="font-size:0.78rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;" title="{{ p.url }}">
+        {{ p.url | replace('https://', '') | replace('http://', '') | truncate(50) }}
+      </a>
+      <span class="{{ sc }}" style="font-weight:bold; font-size:0.85rem; flex-shrink:0;">{{ s }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if bottom_pages %}
+  <div>
+    <div class="section-header"><span class="section-title">🟢 lowest scoring pages</span></div>
+    {% for p in bottom_pages %}
+    {% set s = p.score %}
+    {% if s < 35 %}{% set sc = "c-green" %}{% else %}{% set sc = "c-yellow" %}{% endif %}
+    <div style="display:flex; justify-content:space-between; align-items:baseline; padding:0.3rem 0; border-bottom:1px solid var(--border); gap:0.5rem;">
+      <a href="{{ p.url }}" target="_blank" style="font-size:0.78rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;" title="{{ p.url }}">
+        {{ p.url | replace('https://', '') | replace('http://', '') | truncate(50) }}
+      </a>
+      <span class="{{ sc }}" style="font-weight:bold; font-size:0.85rem; flex-shrink:0;">{{ s }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
 <div class="section-header" style="margin-top:2rem">
   <span class="section-title">recent pages</span>
+</div>
+
+<div class="section-header" style="margin-top:2rem">
+  <span class="section-title">pages</span>
+  <span style="margin-left:auto; display:flex; gap:0.75rem; font-size:0.8rem;">
+    <a href="?sort=recent" {% if sort == 'recent' %}style="color:var(--fg)"{% else %}style="color:var(--fg-dim)"{% endif %}>recent</a>
+    <a href="?sort=highest" {% if sort == 'highest' %}style="color:var(--fg)"{% else %}style="color:var(--fg-dim)"{% endif %}>highest</a>
+    <a href="?sort=lowest" {% if sort == 'lowest' %}style="color:var(--fg)"{% else %}style="color:var(--fg-dim)"{% endif %}>lowest</a>
+  </span>
 </div>
 
 <table class="data-table">
