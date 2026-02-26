@@ -46,7 +46,7 @@ def _resolve_patterns_dir(override: str | None) -> Path:
 )
 @click.pass_context
 def aidar(ctx: click.Context, patterns_dir: str | None, output: str) -> None:
-    """aidar — detect AI-generated text via stylistic signal scoring."""
+    """aidar — track stylistic patterns across the web to surface AI-era writing trends."""
     ctx.ensure_object(dict)
 
     resolved = _resolve_patterns_dir(patterns_dir)

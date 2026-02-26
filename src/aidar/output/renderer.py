@@ -58,7 +58,7 @@ def render_result(result: AggregateResult, show_patterns: bool = False) -> None:
     console.print()
 
     # Aggregate score
-    agg_text = Text(f"  Aggregate Score: {result.aggregate_score}/100  [{result.label}]  ")
+    agg_text = Text(f"  Stylistic Index: {result.aggregate_score}/100  [{result.label}]  ")
     agg_text.stylize(label_style)
     console.print(Panel(agg_text, expand=False))
 
