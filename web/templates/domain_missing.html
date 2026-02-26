@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ domain }} — not found — aidar.lol{% endblock %}
+{% block content %}
+<div class="empty" style="padding: 4rem 0;">
+  <div class="empty-big">{{ domain }}</div>
+  <div style="margin-bottom:1.5rem; color: var(--fg-dim);">
+    this domain hasn't been scanned yet.
+  </div>
+  <div style="color: var(--fg-dim); font-size: 0.8rem; margin-bottom: 2rem;">
+    to add it, run:<br><br>
+    <code style="background: var(--bg2); padding: 0.4rem 0.8rem; border: 1px solid var(--border);">
+      aidar track {{ domain }} --save
+    </code>
+  </div>
+  <a href="/" style="color: var(--blue);">← back to leaderboard</a>
+</div>
+{% endblock %}

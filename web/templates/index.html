@@ -3,6 +3,23 @@
 
 {% block content %}
 
+<form action="/submit" method="POST" style="display:flex; gap:0.5rem; margin-bottom:2rem; max-width:480px;">
+  <input
+    type="text"
+    name="domain"
+    placeholder="example.com"
+    value="{{ q }}"
+    style="flex:1; background:var(--bg2); border:1px solid var(--border); color:var(--fg); padding:0.5rem 0.75rem; font-family:var(--mono); font-size:0.875rem; outline:none;"
+  >
+  <button type="submit"
+    style="background:var(--bg3); border:1px solid var(--border); color:var(--fg); padding:0.5rem 1rem; font-family:var(--mono); font-size:0.875rem; cursor:pointer;">
+    look up →
+  </button>
+</form>
+{% if submit_error %}
+<div style="color:var(--red); font-size:0.8rem; margin-top:-1.5rem; margin-bottom:1.5rem;">{{ submit_error }}</div>
+{% endif %}
+
 {% if stats and stats.total_scans %}
 <div class="stats-bar">
   <div class="stat-item">

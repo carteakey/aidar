@@ -11,9 +11,11 @@ from fastapi.templating import Jinja2Templates
 
 from aidar.db.database import get_connection
 from aidar.db.queries import (
+    get_corpus_percentile,
     get_domain_leaderboard,
     get_domain_scans,
     get_domain_stats,
+    get_domain_trend,
     get_global_stats,
     get_pattern_stats,
 )
@@ -32,14 +34,36 @@ def get_conn():
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
+async def index(request: Request, q: str = ""):
     conn = get_conn()
     leaderboard = get_domain_leaderboard(conn, limit=100)
     stats = get_global_stats(conn)
+    # Add percentile to each leaderboard row
+    total = stats.get("total_scans") or 1
+    for row in leaderboard:
+        below = conn.execute(
+            "SELECT COUNT(*) FROM scans WHERE domain != '' GROUP BY domain HAVING AVG(score) <= ?",
+            (row["avg_score"],),
+        ).fetchall()
+        row["percentile"] = round(len(below) / max(len(leaderboard), 1) * 100)
     return templates.TemplateResponse(
         "index.html",
-        {"request": request, "leaderboard": leaderboard, "stats": stats},
+        {"request": request, "leaderboard": leaderboard, "stats": stats, "q": q},
     )
+
+
+@app.post("/submit", response_class=HTMLResponse)
+async def submit_site(request: Request):
+    form = await request.form()
+    domain = str(form.get("domain", "")).strip().lstrip("https://").lstrip("http://").rstrip("/")
+    if not domain:
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "leaderboard": [], "stats": {}, "submit_error": "Enter a domain."},
+        )
+    # Redirect to domain page — scanning happens via CLI, not the web UI
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"/domain/{domain}", status_code=303)
 
 
 @app.get("/domain/{domain:path}", response_class=HTMLResponse)
@@ -47,10 +71,15 @@ async def domain_page(request: Request, domain: str):
     conn = get_conn()
     stats = get_domain_stats(conn, domain)
     if stats.get("scans", 0) == 0:
-        raise HTTPException(status_code=404, detail="Domain not found")
+        return templates.TemplateResponse(
+            "domain_missing.html",
+            {"request": request, "domain": domain},
+            status_code=404,
+        )
     scans = get_domain_scans(conn, domain, limit=100)
+    trend = get_domain_trend(conn, domain)
+    percentile = get_corpus_percentile(conn, int(stats.get("avg_score", 0)))
 
-    # Parse score_json for each scan to get category breakdown
     for scan in scans:
         try:
             scan["categories"] = json.loads(scan.get("score_json") or "{}")
@@ -59,7 +88,14 @@ async def domain_page(request: Request, domain: str):
 
     return templates.TemplateResponse(
         "domain.html",
-        {"request": request, "domain": domain, "stats": stats, "scans": scans},
+        {
+            "request": request,
+            "domain": domain,
+            "stats": stats,
+            "scans": scans,
+            "trend": trend,
+            "percentile": percentile,
+        },
     )
 
 

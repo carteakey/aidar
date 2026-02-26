@@ -9,8 +9,12 @@ weights:
   vocabulary: 0.10    # Formal register, rare word density
   emoji: 0.10         # Emoji frequency and placement
 
-# Score thresholds for human-readable labels
+# Score thresholds for human-readable labels.
+# Calibrated against real scan data: pure-human blogs score 0-7,
+# AI-assisted content scores 10-22, heavy AI usage scores 25+.
+# These are intentionally conservative — use corpus percentile for
+# relative comparison once you have enough scan data.
 thresholds:
-  likely_human_max: 30   # 0-30 → LIKELY HUMAN
-  likely_ai_min: 65      # 65-100 → LIKELY AI
-                         # 31-64 → UNCERTAIN
+  likely_human_max: 15   # 0-15  → LIKELY HUMAN
+  likely_ai_min: 30      # 30+   → LIKELY AI
+                         # 16-29 → UNCERTAIN

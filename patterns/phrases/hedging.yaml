@@ -1,5 +1,5 @@
 id: hedging_phrases
-version: 1
+version: 2
 name: Hedging Language Cluster
 description: >
   LLMs systematically hedge assertions with qualifiers like "it's worth noting",
@@ -36,6 +36,15 @@ params:
     - "without a doubt"
     - "undoubtedly"
     - "importantly"
+    - "honestly"
+    - "to be honest"
+    - "to be fair"
+    - "to be clear"
+    - "genuinely"
+    - "truthfully"
+    - "candidly"
+    - "i must say"
+    - "i have to say"
   match_mode: contains
   per_n_words: 1000
   threshold_low: 1.5

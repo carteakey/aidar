@@ -5,15 +5,17 @@ from pathlib import Path
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS scans (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    url         TEXT,
-    domain      TEXT,
-    file_path   TEXT,
-    word_count  INTEGER,
-    score       INTEGER,
-    label       TEXT,
-    score_json  TEXT,
-    scanned_at  TEXT,
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    url             TEXT,
+    domain          TEXT,
+    file_path       TEXT,
+    word_count      INTEGER,
+    score           INTEGER,
+    label           TEXT,
+    score_json      TEXT,
+    scanned_at      TEXT,
+    published_date  TEXT,    -- ISO date extracted from article metadata e.g. "2024-03-15"
+    title           TEXT,
     UNIQUE(url)
 );
 
@@ -47,10 +49,14 @@ def get_connection(db_path: str | Path = "aidar.db") -> sqlite3.Connection:
 
 def _migrate(conn: sqlite3.Connection) -> None:
     """Apply additive schema migrations for existing databases."""
-    existing_cols = {
-        row[1] for row in conn.execute("PRAGMA table_info(pattern_scores)").fetchall()
-    }
-    if "pattern_version" not in existing_cols:
+    ps_cols = {row[1] for row in conn.execute("PRAGMA table_info(pattern_scores)").fetchall()}
+    if "pattern_version" not in ps_cols:
         conn.execute(
             "ALTER TABLE pattern_scores ADD COLUMN pattern_version INTEGER NOT NULL DEFAULT 1"
         )
+
+    scan_cols = {row[1] for row in conn.execute("PRAGMA table_info(scans)").fetchall()}
+    if "published_date" not in scan_cols:
+        conn.execute("ALTER TABLE scans ADD COLUMN published_date TEXT")
+    if "title" not in scan_cols:
+        conn.execute("ALTER TABLE scans ADD COLUMN title TEXT")

@@ -22,14 +22,18 @@ def store_result(conn: sqlite3.Connection, result: AggregateResult) -> int:
 
     cursor = conn.execute(
         """
-        INSERT INTO scans (url, domain, file_path, word_count, score, label, score_json, scanned_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO scans
+            (url, domain, file_path, word_count, score, label, score_json,
+             scanned_at, published_date, title)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(url) DO UPDATE SET
             word_count=excluded.word_count,
             score=excluded.score,
             label=excluded.label,
             score_json=excluded.score_json,
-            scanned_at=excluded.scanned_at
+            scanned_at=excluded.scanned_at,
+            published_date=COALESCE(excluded.published_date, scans.published_date),
+            title=COALESCE(excluded.title, scans.title)
         """,
         (
             result.url,
@@ -40,6 +44,8 @@ def store_result(conn: sqlite3.Connection, result: AggregateResult) -> int:
             result.label,
             score_json,
             result.scanned_at.isoformat(),
+            result.published_date,
+            result.title,
         ),
     )
     scan_id = cursor.lastrowid
@@ -165,6 +171,31 @@ def get_pattern_version_summary(conn: sqlite3.Connection) -> list[dict]:
         """
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def get_domain_trend(conn: sqlite3.Connection, domain: str) -> list[dict]:
+    """Return scans ordered by published_date for trend charting."""
+    rows = conn.execute(
+        """
+        SELECT url, title, score, label, word_count,
+               published_date, scanned_at
+        FROM scans
+        WHERE domain = ?
+          AND published_date IS NOT NULL
+        ORDER BY published_date ASC
+        """,
+        (domain,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_corpus_percentile(conn: sqlite3.Connection, score: int) -> float:
+    """Return what percentile this score is in (0.0–1.0) across all scans."""
+    total = conn.execute("SELECT COUNT(*) FROM scans").fetchone()[0]
+    if not total:
+        return 0.0
+    below = conn.execute("SELECT COUNT(*) FROM scans WHERE score <= ?", (score,)).fetchone()[0]
+    return round(below / total, 3)
 
 
 def get_domain_scans(

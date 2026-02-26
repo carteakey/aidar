@@ -10,6 +10,8 @@ def compute_aggregate(
     url: str | None = None,
     file_path: str | None = None,
     word_count: int = 0,
+    published_date: str | None = None,
+    title: str | None = None,
 ) -> AggregateResult:
     """Weighted sum of category scores → 0-100 aggregate with label."""
     weights = config.weights
@@ -37,6 +39,8 @@ def compute_aggregate(
         score_vector=score_vector,
         aggregate_score=aggregate,
         label=label,
+        published_date=published_date,
+        title=title,
     )
 
 

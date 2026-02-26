@@ -30,5 +30,5 @@ class WeightConfig:
 class AppConfig:
     patterns_dir: str
     weights: WeightConfig
-    likely_ai_threshold: int = 65
-    likely_human_threshold: int = 30
+    likely_ai_threshold: int = 30
+    likely_human_threshold: int = 15

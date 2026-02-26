@@ -8,6 +8,12 @@
   <div class="domain-meta">
     {{ stats.scans }} pages scanned &nbsp;&middot;&nbsp;
     last updated {{ stats.latest[:10] if stats.latest else '—' }}
+    {% if percentile is defined %}
+    &nbsp;&middot;&nbsp;
+    <span class="{% if percentile >= 0.65 %}c-red{% elif percentile >= 0.35 %}c-yellow{% else %}c-green{% endif %}">
+      top {{ ((1 - percentile) * 100) | int }}% of corpus
+    </span>
+    {% endif %}
   </div>
 </div>
 
@@ -49,6 +55,23 @@
     <div class="metric-label">low index</div>
   </div>
 </div>
+
+{% if trend and trend | length > 1 %}
+<div class="section-header" style="margin-top:2rem">
+  <span class="section-title">score over time (by publish date)</span>
+  <span class="c-dim" style="font-size:0.75rem">{{ trend | length }} dated articles</span>
+</div>
+<div style="display:flex; align-items:flex-end; gap:3px; height:60px; margin-bottom:2rem;">
+  {% for row in trend %}
+  {% set s = row.score %}
+  {% if s >= 30 %}{% set bc = "#f87171" %}
+  {% elif s >= 15 %}{% set bc = "#facc15" %}
+  {% else %}{% set bc = "#4ade80" %}{% endif %}
+  <div title="{{ row.published_date }}: {{ s }}/100{{ ' — ' + row.title if row.title else '' }}"
+    style="flex:1; background:{{ bc }}; height:{{ [s * 2, 4] | max }}px; min-width:4px; opacity:0.8; cursor:default;"></div>
+  {% endfor %}
+</div>
+{% endif %}
 
 {% if scans %}
 <!-- avg category breakdown from most recent scans -->

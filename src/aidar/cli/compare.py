@@ -45,15 +45,19 @@ def compare(
     for target in targets:
         try:
             if target.startswith(("http://", "https://")):
-                text, word_count = fetch_url(target)
+                fetch = fetch_url(target)
                 url, file_path = target, None
             else:
-                text, word_count = read_file(Path(target))
+                fetch = read_file(Path(target))
                 url, file_path = None, target
 
-            score_vector = analyzer.run(text, word_count)
+            score_vector = analyzer.run(fetch.text, fetch.word_count)
             result = compute_aggregate(
-                score_vector, config, url=url, file_path=file_path, word_count=word_count
+                score_vector, config,
+                url=url, file_path=file_path,
+                word_count=fetch.word_count,
+                published_date=fetch.published_date,
+                title=fetch.title,
             )
             results.append(result)
         except FetchError as e:

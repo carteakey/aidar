@@ -156,9 +156,15 @@ async def _scan_one(url, analyzer, config, client, semaphore, delay, progress, t
         try:
             if delay > 0:
                 await asyncio.sleep(delay)
-            text, word_count = await fetch_url_async(url, client)
-            score_vector = analyzer.run(text, word_count)
-            result = compute_aggregate(score_vector, config, url=url, word_count=word_count)
+            fetch = await fetch_url_async(url, client)
+            score_vector = analyzer.run(fetch.text, fetch.word_count)
+            result = compute_aggregate(
+                score_vector, config,
+                url=url,
+                word_count=fetch.word_count,
+                published_date=fetch.published_date,
+                title=fetch.title,
+            )
             return result
         except FetchError:
             return None

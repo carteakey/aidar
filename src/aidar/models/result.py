@@ -46,6 +46,8 @@ class AggregateResult:
     aggregate_score: int
     label: str
     scanned_at: datetime = field(default_factory=datetime.utcnow)
+    published_date: str | None = None   # ISO date from article metadata e.g. "2024-03-15"
+    title: str | None = None
     model_match: dict[str, float] | None = None
 
     def as_dict(self) -> dict:

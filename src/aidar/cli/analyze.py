@@ -48,25 +48,31 @@ def analyze(
     # Fetch text
     try:
         if target.startswith(("http://", "https://")):
-            text, word_count = fetch_url(target)
+            fetch = fetch_url(target)
             url, file_path = target, None
         else:
-            text, word_count = read_file(Path(target))
+            fetch = read_file(Path(target))
             url, file_path = None, target
     except FetchError as e:
         render_error(str(e))
         raise SystemExit(1)
 
-    if word_count < min_words:
+    if fetch.word_count < min_words:
         click.echo(
-            f"Warning: only {word_count} words extracted "
+            f"Warning: only {fetch.word_count} words extracted "
             f"(--min-words={min_words}). Results may be unreliable.",
             err=True,
         )
 
     # Run analysis
-    score_vector = analyzer.run(text, word_count)
-    result = compute_aggregate(score_vector, config, url=url, file_path=file_path, word_count=word_count)
+    score_vector = analyzer.run(fetch.text, fetch.word_count)
+    result = compute_aggregate(
+        score_vector, config,
+        url=url, file_path=file_path,
+        word_count=fetch.word_count,
+        published_date=fetch.published_date,
+        title=fetch.title,
+    )
 
     # Model comparison
     if compare_model:
