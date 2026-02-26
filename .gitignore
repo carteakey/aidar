@@ -18,3 +18,6 @@ venv/
 *.sqlite
 *.sqlite3
 .DS_Store
+aidar.db
+aidar.db-shm
+aidar.db-wal
