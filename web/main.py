@@ -60,15 +60,37 @@ def _get_analyzer():
 
 async def _run_domain_scan(domain: str, limit: int = 50) -> None:
     """Background task: discover → filter → scan → store results for a domain."""
-    from aidar.cli.discover import _from_rss, _from_sitemap, _normalize_domain
-    from aidar.core.fetcher import FetchError, fetch_url_async
+    from urllib.parse import urlparse
+
+    from aidar.core.fetcher import fetch_url_async
     from aidar.core.scorer import compute_aggregate
     from aidar.db.queries import store_result, url_already_scanned
 
+    def _normalize(d: str) -> str:
+        if not d.startswith(("http://", "https://")):
+            d = "https://" + d
+        p = urlparse(d)
+        return f"{p.scheme}://{p.netloc}"
+
+    def _discover(base_url: str) -> list[str]:
+        try:
+            from trafilatura.sitemaps import sitemap_search
+            urls = list(sitemap_search(base_url) or [])
+            if urls:
+                return urls
+        except Exception:
+            pass
+        try:
+            from trafilatura.feeds import find_feed_urls
+            urls = find_feed_urls(base_url) or []
+            return [u for u in urls if not u.endswith((".xml", ".rss", ".atom"))]
+        except Exception:
+            return []
+
     _scan_status[domain] = "running"
     try:
-        base_url = _normalize_domain(domain)
-        urls = _from_sitemap(base_url) or _from_rss(base_url)
+        base_url = _normalize(domain)
+        urls = _discover(base_url)
         if not urls:
             _scan_status[domain] = "error:no_urls"
             return
