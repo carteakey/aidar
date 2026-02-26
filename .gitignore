@@ -21,3 +21,4 @@ venv/
 aidar.db
 aidar.db-shm
 aidar.db-wal
+.db-backups/

@@ -5,9 +5,34 @@
 
 <div style="max-width: 640px; line-height: 2;">
 
-<p style="font-size:1.1rem; margin-bottom:2rem; color: var(--fg);">
+<p style="font-size:1.1rem; margin-bottom:0.5rem; color: var(--fg);">
+  <strong>TL;DR:</strong> it&rsquo;s gaydar, but for LLMs.
+</p>
+
+<p style="margin-bottom:2rem; color: var(--fg-dim); font-size:0.9rem;">
+  (and before you ask &mdash; yes, we know the irony of an AI building a tool to detect AI writing.
+  the em dashes in the source code are <em>very</em> real.)
+</p>
+
+<div style="margin-bottom:2rem; text-align:center;">
+  <div class="tenor-gif-embed"
+       data-postid="6442703083805935667"
+       data-share-method="host"
+       data-aspect-ratio="1.40845"
+       data-width="480px">
+    <a href="https://tenor.com/view/its-over-9000-itsover9000-saiyan-saga-vegeta-scouter-break-gif-6442703083805935667">
+      it&rsquo;s over 9000 GIF
+    </a>
+  </div>
+  <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+  <p style="color:var(--fg-dimmer); font-size:0.75rem; margin-top:0.5rem;">
+    // your scouter when you hit a freshly-generated blog post
+  </p>
+</div>
+
+<p style="font-size:1rem; margin-bottom:2rem; color: var(--fg);">
   aidar tracks stylistic patterns across the web that correlate with AI-era writing.
-  It doesn't know if you're a robot. It just notices things.
+  It doesn&rsquo;t know if you&rsquo;re a robot. It just notices things.
 </p>
 
 <div class="section-header"><span class="section-title">what it measures</span></div>
@@ -16,6 +41,14 @@
   &ldquo;delve into&rdquo;, &ldquo;key takeaway&rdquo;), bullet point density, header overuse,
   formal register vocabulary, emoji density. Each site gets a <strong>Stylistic Index</strong>
   from 0&ndash;100. Higher = more signal. Lower = less signal. Draw your own conclusions.
+</p>
+
+<div class="section-header"><span class="section-title">calibration warning</span></div>
+<p style="margin-bottom:1.5rem; color: var(--fg-dim);">
+  The index needs calibration. Patterns were tuned against a limited sample.
+  Some human writers score high (journalistic hedging, heavy headers).
+  Some AI content scores low (short posts, plain prose). Treat it as a vibes-meter,
+  not a verdict. PRs to <a href="https://github.com/carteakey/aidar/tree/main/patterns" target="_blank">improve the patterns</a> very welcome.
 </p>
 
 <div class="section-header"><span class="section-title">what it is not</span></div>
