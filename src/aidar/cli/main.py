@@ -10,7 +10,7 @@ from aidar.patterns.loader import load_patterns, load_weight_config
 from aidar.patterns.registry import PatternRegistry
 
 # Default patterns directory: repo root's patterns/ folder
-_DEFAULT_PATTERNS_DIR = Path(__file__).parent.parent.parent.parent.parent / "patterns"
+_DEFAULT_PATTERNS_DIR = Path(__file__).parent.parent.parent.parent / "patterns"
 
 
 def _resolve_patterns_dir(override: str | None) -> Path:
