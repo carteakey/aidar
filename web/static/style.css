@@ -10,7 +10,7 @@
   --red: #f87171;
   --blue: #60a5fa;
   --border: #2a2a2a;
-  --mono: 'Courier New', Courier, monospace;
+  --mono: 'Geist Mono', 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
