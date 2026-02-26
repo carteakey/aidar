@@ -20,7 +20,7 @@ def store_result(conn: sqlite3.Connection, result: AggregateResult) -> int:
 
     score_json = json.dumps(result.score_vector.as_dict())
 
-    cursor = conn.execute(
+    conn.execute(
         """
         INSERT INTO scans
             (url, domain, file_path, word_count, score, label, score_json,
@@ -48,7 +48,11 @@ def store_result(conn: sqlite3.Connection, result: AggregateResult) -> int:
             result.title,
         ),
     )
-    scan_id = cursor.lastrowid
+    # Always fetch the real ID — lastrowid is unreliable for ON CONFLICT DO UPDATE
+    scan_id = conn.execute(
+        "SELECT id FROM scans WHERE url = ? OR (url IS NULL AND file_path = ?)",
+        (result.url, result.file_path),
+    ).fetchone()[0]
 
     # Delete old pattern scores for this scan (in case of update)
     conn.execute("DELETE FROM pattern_scores WHERE scan_id = ?", (scan_id,))
