@@ -16,6 +16,10 @@ set -euo pipefail
 DOMAIN="${1:?Usage: track-and-sync.sh <domain> [--limit N]}"
 shift
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# shellcheck source=/dev/null
+source "$REPO_ROOT/scripts/lib/env.sh"
+
 AIDAR_DB="${AIDAR_DB:-$REPO_ROOT/aidar.db}"
 BACKUP_DIR="${BACKUP_DIR:-$REPO_ROOT/.db-backups}"
 CONFIG="$REPO_ROOT/litestream.yml"
