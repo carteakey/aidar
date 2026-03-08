@@ -15,10 +15,14 @@ venv/
 .mypy_cache/
 .ruff_cache/
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
 .DS_Store
 aidar.db
 aidar.db-shm
 aidar.db-wal
+.aidar.db-litestream/
+.*.db-litestream/
 .db-backups/

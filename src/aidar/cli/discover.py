@@ -113,14 +113,28 @@ def discover(
             click.echo(url)
 
 
-def _from_sitemap(base_url: str) -> list[str]:
-    """Try to extract URLs from sitemap.xml / sitemap_index.xml."""
+def _sitemap_worker(base_url: str, queue) -> None:
     try:
         from trafilatura.sitemaps import sitemap_search
-        urls = sitemap_search(base_url)
-        return list(urls) if urls else []
+        urls = list(sitemap_search(base_url) or [])
+        queue.put(urls)
     except Exception:
+        queue.put([])
+
+
+def _from_sitemap(base_url: str, timeout: int = 30) -> list[str]:
+    """Try to extract URLs from sitemap.xml / sitemap_index.xml."""
+    import multiprocessing
+    queue = multiprocessing.Queue()
+    p = multiprocessing.Process(target=_sitemap_worker, args=(base_url, queue))
+    p.start()
+    p.join(timeout=timeout)
+    if p.is_alive():
+        console.print(f"[yellow]Sitemap discovery timed out after {timeout}s.[/yellow]")
+        p.terminate()
+        p.join()
         return []
+    return queue.get() if not queue.empty() else []
 
 
 def _from_rss(base_url: str) -> list[str]:
