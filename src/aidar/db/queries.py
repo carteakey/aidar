@@ -60,10 +60,18 @@ def store_result(conn: sqlite3.Connection, result: AggregateResult) -> int:
     # Insert fresh pattern scores with version
     conn.executemany(
         "INSERT INTO pattern_scores "
-        "(scan_id, pattern_id, category, raw_value, norm_score, pattern_version) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
+        "(scan_id, pattern_id, category, raw_value, norm_score, pattern_version, pattern_hash) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
         [
-            (scan_id, r.pattern_id, r.category, r.raw_value, r.normalized_score, r.pattern_version)
+            (
+                scan_id,
+                r.pattern_id,
+                r.category,
+                r.raw_value,
+                r.normalized_score,
+                r.pattern_version,
+                r.pattern_hash,
+            )
             for r in result.score_vector.pattern_results
         ],
     )
@@ -135,7 +143,7 @@ def url_already_scanned(conn: sqlite3.Connection, url: str) -> bool:
 
 def get_stale_urls(
     conn: sqlite3.Connection,
-    current_versions: dict[str, int],
+    current_versions: dict[str, int | tuple[int, str]],
     domain: str | None = None,
 ) -> list[str]:
     """
@@ -143,23 +151,45 @@ def get_stale_urls(
     current_versions: dict of {pattern_id: current_version} from the loaded registry.
     If domain is set, only checks that domain.
     """
-    stale: set[str] = set()
-    for pattern_id, current_version in current_versions.items():
-        query = """
-            SELECT DISTINCT s.url
-            FROM scans s
-            JOIN pattern_scores ps ON ps.scan_id = s.id
-            WHERE ps.pattern_id = ?
-              AND ps.pattern_version < ?
-              AND s.url IS NOT NULL
-        """
-        params: list = [pattern_id, current_version]
-        if domain:
-            query += " AND s.domain = ?"
-            params.append(domain)
-        rows = conn.execute(query, params).fetchall()
-        stale.update(r["url"] for r in rows)
-    return sorted(stale)
+    normalized: list[tuple[str, int, str]] = []
+    for pattern_id, value in current_versions.items():
+        if isinstance(value, tuple):
+            version, pattern_hash = value
+        else:
+            version, pattern_hash = value, ""
+        normalized.append((pattern_id, int(version), str(pattern_hash)))
+
+    if not normalized:
+        return []
+
+    values_sql = ",".join("(?, ?, ?)" for _ in normalized)
+    params: list = []
+    for row in normalized:
+        params.extend(row)
+
+    query = f"""
+        WITH current(pattern_id, pattern_version, pattern_hash) AS (
+            VALUES {values_sql}
+        )
+        SELECT DISTINCT s.url
+        FROM scans s
+        JOIN pattern_scores ps ON ps.scan_id = s.id
+        JOIN current c ON c.pattern_id = ps.pattern_id
+        WHERE s.url IS NOT NULL
+          AND (
+                ps.pattern_version < c.pattern_version
+                OR (
+                    c.pattern_hash != ''
+                    AND COALESCE(ps.pattern_hash, '') != c.pattern_hash
+                )
+              )
+    """
+    if domain:
+        query += " AND s.domain = ?"
+        params.append(domain)
+
+    rows = conn.execute(query, params).fetchall()
+    return sorted(r["url"] for r in rows)
 
 
 def get_pattern_version_summary(conn: sqlite3.Connection) -> list[dict]:

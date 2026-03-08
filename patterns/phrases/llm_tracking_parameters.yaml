@@ -1,0 +1,22 @@
+id: llm_tracking_parameters
+version: 1
+name: LLM Source Tracking Parameters
+description: >
+  Detects source-link tracking parameters commonly injected by AI assistants
+  when they cite web pages (for example utm_source=chatgpt.com or
+  referrer=grok.com). These are uncommon in organic prose and strong evidence
+  of AI-assisted source gathering.
+category: phrases
+weight: 0.90
+detection_type: regex
+severity: high
+references:
+  - https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+params:
+  patterns:
+    - "utm_source=(?:chatgpt\\.com|openai|copilot\\.com)"
+    - "referrer=grok\\.com"
+  per_n_words: 1000
+  threshold_low: 0.01
+  threshold_high: 0.15
+

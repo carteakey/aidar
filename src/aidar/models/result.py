@@ -13,6 +13,7 @@ class PatternResult:
     weight: float
     label: str
     pattern_version: int = 1
+    pattern_hash: str = ""
 
 
 @dataclass
@@ -66,6 +67,8 @@ class AggregateResult:
                     "raw_value": r.raw_value,
                     "normalized_score": r.normalized_score,
                     "label": r.label,
+                    "pattern_version": r.pattern_version,
+                    "pattern_hash": r.pattern_hash,
                 }
                 for r in self.score_vector.pattern_results
             ],

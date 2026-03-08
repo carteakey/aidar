@@ -6,6 +6,8 @@ The pattern repository is the heart of the project. Anyone can contribute new si
 
 Each pattern is a YAML file in `patterns/<category>/`. When you run `aidar scan`, every pattern runs against the extracted text and produces a normalized 0–1 score. Scores are aggregated per category, then into a final **Stylistic Index**.
 
+The current full inventory (with thresholds/weights) lives in [`docs/PATTERN_CATALOG.md`](docs/PATTERN_CATALOG.md). When you add or tune patterns, update that file in the same PR.
+
 ## Adding a new pattern
 
 1. **Pick the right category:**
@@ -113,6 +115,8 @@ aidar patterns versions  # see what's stale in your DB
 - Fixing a typo in `description` or `name`
 - Adding a `reference` URL
 - Changing `weight` (this affects scoring but not detection)
+
+Note: aidar also stores a pattern fingerprint hash with each score and uses it for stale detection. So stale rescans still trigger if detection-relevant fields change without a version bump. Version bumps are still recommended for explicit change tracking and reproducibility.
 
 ---
 

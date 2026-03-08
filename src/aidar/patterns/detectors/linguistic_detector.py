@@ -152,6 +152,7 @@ class LinguisticDetector(BaseDetector):
                 weight=self.pattern.weight,
                 label="wordfreq not installed",
                 pattern_version=self.pattern.version,
+                pattern_hash=self.pattern_hash,
             )
 
         words = _CONTENT_WORD_RE.findall(text.lower())
@@ -164,6 +165,7 @@ class LinguisticDetector(BaseDetector):
                 weight=self.pattern.weight,
                 label="too few content words",
                 pattern_version=self.pattern.version,
+                pattern_hash=self.pattern_hash,
             )
 
         freqs = [zipf_frequency(w, "en") for w in words]
@@ -178,6 +180,7 @@ class LinguisticDetector(BaseDetector):
                 weight=self.pattern.weight,
                 label="too few known words",
                 pattern_version=self.pattern.version,
+                pattern_hash=self.pattern_hash,
             )
 
         std = statistics.stdev(freqs)
@@ -197,4 +200,5 @@ class LinguisticDetector(BaseDetector):
             weight=self.pattern.weight,
             label=f"Zipf std={std:.3f} over {len(freqs)} content words",
             pattern_version=self.pattern.version,
+            pattern_hash=self.pattern_hash,
         )

@@ -17,6 +17,7 @@ Inspired by: [New accounts on Hacker News ten times more likely to use em-dashes
 
 ```bash
 pip install -e .
+cp .env.example .env  # fill Litestream/R2 credentials
 
 # Analyze a single page
 aidar analyze https://example.com
@@ -30,10 +31,22 @@ aidar scan --batch urls.txt --concurrency 20 --save
 # Inspect loaded signal patterns
 aidar patterns list
 aidar patterns show em_dash_overuse
+aidar patterns versions
 
 # JSON output for downstream use
 aidar --output json analyze https://example.com
+
+# Keep scanning domains in a loop (overnight worker)
+aidar worker --domains-file domains.txt --interval-minutes 60 --limit 200 --db aidar.db
+
+# HN trending domains only (refresh every 24h)
+aidar worker --hn-domains 25 --hn-story-limit 250 --interval-minutes 1440 --max-cycles 0 --db aidar.db
+
+# Existing domains from file with pull/push sync
+bash scripts/domains-daily-sync.sh
 ```
+
+Saved operational runbook: [`docs/HN_RUNBOOK.md`](docs/HN_RUNBOOK.md).
 
 ## Signal categories
 
@@ -48,6 +61,13 @@ aidar --output json analyze https://example.com
 ## Pattern repository
 
 Patterns live in `patterns/` as YAML files — no Python needed to add new signals. Model profiles in `patterns/models/` store known stylistic baselines for Claude, GPT-4, and Gemini for use with `--compare-model`.
+
+For a full inventory of active patterns and current thresholds, see [`docs/PATTERN_CATALOG.md`](docs/PATTERN_CATALOG.md).
+
+Pattern staleness is automatic:
+- Each stored pattern score now includes both `pattern_version` and a fingerprint hash.
+- If a pattern YAML changes (even without a version bump), stale URLs are auto-detected and re-scanned during `aidar track` / `aidar worker` (unless `--no-rescan-stale` is set).
+- Existing rows from older DBs (without stored hashes) are treated as stale once and get refreshed on the next run.
 
 ## Leaderboard
 

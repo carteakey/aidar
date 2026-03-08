@@ -1,0 +1,26 @@
+id: llm_reference_artifacts
+version: 1
+name: LLM Reference Artifact Tokens
+description: >
+  Detects citation and placeholder artifacts leaked from chatbot interfaces,
+  including turn-index tokens, oaicite/contentReference fragments, and
+  attributableIndex metadata. These strings are high-precision indicators of
+  copied LLM output rather than normal human prose.
+category: phrases
+weight: 0.95
+detection_type: regex
+severity: high
+references:
+  - https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+params:
+  patterns:
+    - "turn\\d+(?:search|image|news|file)\\d+"
+    - "citeturn\\d+(?:search|image|news|file)\\d+"
+    - "contentReference\\[oaicite:\\d+\\]"
+    - "\\boai_citation\\b"
+    - "\\boaicite\\b"
+    - "attributableIndex"
+    - "generated-reference-identifier"
+  per_n_words: 1000
+  threshold_low: 0.01
+  threshold_high: 0.20

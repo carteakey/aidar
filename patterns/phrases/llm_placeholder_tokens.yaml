@@ -1,0 +1,25 @@
+id: llm_placeholder_tokens
+version: 1
+name: LLM Placeholder Token Leakage
+description: >
+  Detects unresolved placeholder strings often left in AI-generated drafts,
+  including templated URL variables and stub dates such as 2025-XX-XX. These
+  tokens are typically emitted by prompt templates or unfinished model output.
+category: phrases
+weight: 0.88
+detection_type: regex
+severity: high
+references:
+  - https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+params:
+  patterns:
+    - "\\b20\\d{2}-(?:XX|xx)-(?:XX|xx)\\b"
+    - "\\bINSERT_[A-Z0-9_]+\\b"
+    - "\\bPASTE_[A-Z0-9_]+_HERE\\b"
+    - "\\bSOURCE_PUBLISHER\\b"
+    - "\\bINSERT_SOURCE_URL_\\d+\\b"
+    - "\\[Entertainer's Name\\]"
+  per_n_words: 1000
+  threshold_low: 0.01
+  threshold_high: 0.25
+

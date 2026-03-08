@@ -1,0 +1,23 @@
+id: llm_markup_artifacts
+version: 1
+name: LLM Markup Artifact Leakage
+description: >
+  Detects leftover markup and attachment tags from chatbot outputs, including
+  bracketed attachment references and grok citation cards. These fragments are
+  strong indicators of direct copy/paste from AI interfaces.
+category: phrases
+weight: 0.92
+detection_type: regex
+severity: high
+references:
+  - https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+params:
+  patterns:
+    - "\\[attached_file:\\d+\\]"
+    - "\\[web:\\d+\\]"
+    - "<grok-card\\b"
+    - "```wikitext"
+  per_n_words: 1000
+  threshold_low: 0.01
+  threshold_high: 0.20
+

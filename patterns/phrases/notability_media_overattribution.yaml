@@ -1,0 +1,38 @@
+id: notability_media_overattribution
+version: 1
+name: Notability and Media Over-Attribution
+description: >
+  Captures formulaic claims that emphasize notability by naming media coverage
+  rather than summarizing sourced facts. This pattern targets recurring AI-style
+  phrasing around "featured in", "independent coverage", and "media outlets".
+category: phrases
+weight: 0.76
+detection_type: frequency
+severity: medium
+references:
+  - https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+params:
+  terms:
+    - "independent coverage"
+    - "media outlets"
+    - "featured in"
+    - "profiled in"
+    - "widely covered in"
+    - "local media"
+    - "regional media"
+    - "national media"
+    - "industry reports"
+    - "observers have cited"
+    - "experts argue"
+    - "some critics argue"
+    - "several publications"
+    - "several sources"
+    - "active social media presence"
+    - "maintains an active social media presence"
+    - "underscoring its significance"
+    - "underscoring its role"
+  match_mode: contains
+  per_n_words: 1000
+  threshold_low: 1.5
+  threshold_high: 11.0
+

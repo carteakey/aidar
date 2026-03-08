@@ -34,6 +34,14 @@ This does:
 3. Checkpoint WAL
 4. Push updated DB back to R2 (`scripts/push-to-r2.sh`)
 
+For existing domains from a file (instead of HN trending):
+
+```bash
+bash scripts/domains-daily-sync.sh
+```
+
+Defaults to `DOMAINS_FILE=domains.txt` (override with env var).
+
 Optional Heroku restart at the end:
 
 ```bash

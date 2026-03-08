@@ -11,6 +11,7 @@ class BaseDetector(ABC):
 
     def __init__(self, pattern: PatternDef) -> None:
         self.pattern = pattern
+        self.pattern_hash = pattern.fingerprint()
 
     @abstractmethod
     def detect(self, text: str, word_count: int) -> PatternResult:
@@ -40,4 +41,5 @@ class BaseDetector(ABC):
             weight=self.pattern.weight,
             label=label,
             pattern_version=self.pattern.version,
+            pattern_hash=self.pattern_hash,
         )

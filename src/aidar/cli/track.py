@@ -9,7 +9,6 @@ import httpx
 from aidar.cli.discover import _from_rss, _from_sitemap, _normalize_domain
 from aidar.cli.main import aidar
 from aidar.cli.scan import _scan_one
-from aidar.core.comparator import rank_results
 from aidar.output.renderer import console
 
 
@@ -47,10 +46,10 @@ from aidar.output.renderer import console
     show_default=True,
 )
 @click.option(
-    "--rescan-stale",
-    is_flag=True,
-    default=False,
-    help="Re-scan URLs where any pattern version has been bumped since last scan",
+    "--rescan-stale/--no-rescan-stale",
+    default=True,
+    show_default=True,
+    help="Automatically re-scan URLs when pattern revisions/fingerprints changed",
 )
 @click.option(
     "--skip-pattern",
@@ -82,27 +81,61 @@ def track(
       aidar track gwern.net --skip-pattern /doc/ --skip-pattern /doc
       aidar track ainewsinternational.com --skip-pattern /tag/ --skip-pattern /page/
     """
+    run_track_domain(
+        analyzer=ctx.obj["analyzer"],
+        config=ctx.obj["config"],
+        registry=ctx.obj["registry"],
+        domain=domain,
+        limit=limit,
+        concurrency=concurrency,
+        db_path=db_path,
+        skip_existing=skip_existing,
+        source=source,
+        rescan_stale=rescan_stale,
+        skip_patterns=skip_patterns,
+    )
+
+
+def run_track_domain(
+    *,
+    analyzer,
+    config,
+    registry,
+    domain: str,
+    limit: int = 100,
+    concurrency: int = 10,
+    db_path: str = "aidar.db",
+    skip_existing: bool = True,
+    source: str = "auto",
+    rescan_stale: bool = True,
+    skip_patterns: tuple[str, ...] = (),
+) -> dict[str, int]:
+    """
+    Shared track execution for CLI and background worker.
+    Returns summary counters for observability.
+    """
     base_url = _normalize_domain(domain)
     domain_name = urlparse(base_url).netloc
 
     console.print(f"\n[bold]Tracking:[/bold] {domain_name}")
-    console.print(f"[dim]Discovering URLs...[/dim]")
+    console.print("[dim]Discovering URLs...[/dim]")
 
-    # Discover URLs
+    from aidar.db.database import get_connection
+    from aidar.db.queries import store_result, url_already_scanned
+
+    conn = get_connection(db_path)
+
     urls: list[str] = []
     if source in ("auto", "sitemap"):
         urls = _from_sitemap(base_url)
     if not urls and source in ("auto", "rss"):
         urls = _from_rss(base_url)
 
-    if not urls:
-        console.print(f"[red]Could not discover any URLs for {domain_name}.[/red]")
-        console.print("[dim]Try: aidar discover <domain> to debug discovery manually.[/dim]")
-        raise SystemExit(1)
+    if urls:
+        console.print(f"[dim]Discovered {len(urls)} URLs.[/dim]")
+    else:
+        console.print(f"[yellow]Could not discover any URLs for {domain_name} via {source}.[/yellow]")
 
-    console.print(f"[dim]Discovered {len(urls)} URLs.[/dim]")
-
-    # Filter out non-article URLs (tag pages, pagination, author pages, etc.)
     if skip_patterns:
         before = len(urls)
         urls = [u for u in urls if not any(p in u for p in skip_patterns)]
@@ -110,19 +143,18 @@ def track(
         if filtered:
             console.print(f"[dim]Filtered {filtered} URLs matching skip patterns.[/dim]")
 
-    # Set up DB
-    from aidar.db.database import get_connection
-    from aidar.db.queries import store_result, url_already_scanned, get_domain_stats
-
-    conn = get_connection(db_path)
-
     if rescan_stale:
         from aidar.db.queries import get_stale_urls
-        registry = ctx.obj["registry"]
-        current_versions = {p.id: p.version for p in registry.all_patterns()}
-        stale = set(get_stale_urls(conn, current_versions, domain=domain_name))
+
+        current_signatures = {
+            p.id: (p.version, p.fingerprint())
+            for p in registry.all_patterns()
+        }
+        stale = set(get_stale_urls(conn, current_signatures, domain=domain_name))
         if stale:
-            console.print(f"[yellow]{len(stale)} URLs stale (pattern versions updated) — forcing rescan.[/yellow]")
+            console.print(
+                f"[yellow]{len(stale)} URLs stale (pattern changed) — forcing rescan.[/yellow]"
+            )
             urls = list(stale | set(u for u in urls if not url_already_scanned(conn, u)))
         else:
             console.print("[dim]No stale URLs found.[/dim]")
@@ -136,22 +168,17 @@ def track(
             console.print(f"[dim]Skipping {skipped} already-scanned URLs.[/dim]")
 
     if not urls:
-        console.print(f"[green]All URLs already up to date.[/green]")
+        console.print("[green]All URLs already up to date.[/green]")
         _print_domain_summary(conn, domain_name)
-        return
+        return {"discovered": 0, "queued": 0, "saved": 0}
 
     urls = urls[:limit]
     console.print(f"[bold]Scanning {len(urls)} URLs (concurrency={concurrency})...[/bold]\n")
 
-    analyzer = ctx.obj["analyzer"]
-    config = ctx.obj["config"]
-
-    # Async bulk scan (reuse scan's logic)
     from rich.progress import Progress, SpinnerColumn, BarColumn, TaskProgressColumn, TextColumn
 
     async def run():
         semaphore = asyncio.Semaphore(concurrency)
-        results = []
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -169,13 +196,12 @@ def track(
         return [r for r in raw if r is not None and not isinstance(r, Exception)]
 
     results = asyncio.run(run())
-
-    # Save
     for result in results:
         store_result(conn, result)
 
     console.print(f"\n[green]Saved {len(results)} results to {db_path}[/green]")
     _print_domain_summary(conn, domain_name)
+    return {"discovered": len(urls), "queued": len(urls), "saved": len(results)}
 
 
 def _print_domain_summary(conn, domain: str) -> None:

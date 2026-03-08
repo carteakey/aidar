@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
@@ -37,3 +39,22 @@ class PatternDef:
                 f"Pattern '{self.id}': invalid detection_type '{self.detection_type}'. "
                 f"Must be one of {valid_detection_types}"
             )
+
+    def fingerprint(self) -> str:
+        """
+        Stable signature of detection-relevant fields.
+
+        Used to detect stale scores automatically when a pattern definition
+        changes without a version bump.
+        """
+        payload = {
+            "id": self.id,
+            "category": self.category,
+            "detection_type": self.detection_type,
+            "version": self.version,
+            "weight": self.weight,
+            "params": self.params,
+            "severity": self.severity,
+        }
+        blob = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+        return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]

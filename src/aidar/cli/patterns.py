@@ -88,8 +88,8 @@ def versions_command(ctx: click.Context, db_path: str) -> None:
     console.print(table)
     if any_stale:
         console.print(
-            "\n[yellow]Some patterns are stale. Re-run with:[/yellow] "
-            "[bold]aidar track <domain> --rescan-stale[/bold]"
+            "\n[yellow]Some patterns are stale.[/yellow] "
+            "[dim]track/worker rescan stale URLs automatically by default.[/dim]"
         )
 
 
