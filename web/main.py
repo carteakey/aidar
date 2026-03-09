@@ -251,9 +251,23 @@ async def patterns_page(request: Request):
     conn = get_conn()
     pattern_stats = get_pattern_stats(conn)
     global_stats = get_global_stats(conn)
+
+    # Build a lookup from pattern_id → PatternDef for the template
+    analyzer, _ = _get_analyzer()
+    catalog: dict[str, dict] = {}
+    for pat in analyzer.registry.all_patterns():
+        catalog[pat.id] = {
+            "name": pat.name,
+            "description": pat.description,
+            "category": pat.category,
+            "detection_type": pat.detection_type,
+            "version": pat.version,
+            "severity": pat.severity,
+        }
+
     return templates.TemplateResponse(
         "patterns.html",
-        {"request": request, "patterns": pattern_stats, "stats": global_stats},
+        {"request": request, "patterns": pattern_stats, "stats": global_stats, "catalog": catalog},
     )
 
 

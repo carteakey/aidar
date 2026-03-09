@@ -129,7 +129,19 @@ def _dedupe_keep_order(domains: list[str]) -> list[str]:
     "--hn-min-story-count",
     default=2,
     show_default=True,
-    help="Minimum HN story count per domain before it is included.",
+    help="Minimum HN story count per domain before it is included (top/best stories).",
+)
+@click.option(
+    "--hn-new-domains",
+    default=0,
+    show_default=True,
+    help="Also add top N domains from HN /new stories each cycle (0 disables). min_story_count is forced to 1 for new stories.",
+)
+@click.option(
+    "--hn-new-story-limit",
+    default=100,
+    show_default=True,
+    help="How many HN new stories to sample when discovering fresh domains.",
 )
 @click.pass_context
 def worker(
@@ -149,6 +161,8 @@ def worker(
     hn_domains: int,
     hn_story_limit: int,
     hn_min_story_count: int,
+    hn_new_domains: int,
+    hn_new_story_limit: int,
 ) -> None:
     """
     Continuous scanner: discovers + scans domains in a loop.
@@ -169,7 +183,8 @@ def worker(
     cycle = 0
     console.print(
         f"[bold]Worker started[/bold] domains={len(domain_list)} "
-        f"hn_domains={hn_domains} interval={interval_minutes}m max_cycles={max_cycles or '∞'}"
+        f"hn_domains={hn_domains} hn_new_domains={hn_new_domains} "
+        f"interval={interval_minutes}m max_cycles={max_cycles or '∞'}"
     )
 
     try:
@@ -194,6 +209,23 @@ def worker(
                     )
                 else:
                     console.print("[yellow]HN trending lookup returned no domains this cycle.[/yellow]")
+
+            if hn_new_domains > 0:
+                new_trending = get_hn_trending_domains(
+                    story_limit=hn_new_story_limit,
+                    top_domains=hn_new_domains,
+                    min_story_count=1,
+                    story_type="new",
+                )
+                if new_trending:
+                    new_list = [domain for domain, _count in new_trending]
+                    cycle_domains = _dedupe_keep_order(cycle_domains + new_list)
+                    preview = ", ".join(d for d, _ in new_trending[:8])
+                    console.print(
+                        f"[dim]HN new domains added: {len(new_list)}[/dim] {preview}"
+                    )
+                else:
+                    console.print("[yellow]HN new stories lookup returned no domains this cycle.[/yellow]")
 
             total_saved = 0
             for domain in cycle_domains:

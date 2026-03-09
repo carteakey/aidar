@@ -14,6 +14,7 @@
     <tr>
       <th>pattern</th>
       <th>category</th>
+      <th>type</th>
       <th>avg score</th>
       <th>occurrences</th>
     </tr>
@@ -24,9 +25,16 @@
     {% if s >= 0.65 %}{% set sc = "c-red" %}{% set bc = "#f87171" %}
     {% elif s >= 0.35 %}{% set sc = "c-yellow" %}{% set bc = "#facc15" %}
     {% else %}{% set sc = "c-green" %}{% set bc = "#4ade80" %}{% endif %}
-    <tr>
-      <td>{{ p.pattern_id }}</td>
+    {% set meta = catalog.get(p.pattern_id, {}) %}
+    <tr title="{{ meta.get('description', '') }}">
+      <td>
+        <span>{{ p.pattern_id }}</span>
+        {% if meta.get('description') %}
+        <div class="c-dim" style="font-size:0.72rem;margin-top:2px">{{ meta.description }}</div>
+        {% endif %}
+      </td>
       <td class="c-dim">{{ p.category }}</td>
+      <td class="c-dim" style="font-size:0.75rem">{{ meta.get('detection_type', '') }}</td>
       <td>
         <div class="score-bar-wrap">
           <div class="score-bar">
@@ -42,10 +50,40 @@
 </table>
 
 {% else %}
+{# No DB data yet — show the full catalog from loaded patterns #}
+<div style="margin-bottom:0.5rem" class="c-dim" style="font-size:0.8rem">pattern catalog (no scan data yet)</div>
+{% if catalog %}
+<table class="data-table pattern-row">
+  <thead>
+    <tr>
+      <th>pattern</th>
+      <th>category</th>
+      <th>type</th>
+      <th>version</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for pid, meta in catalog.items() | sort %}
+    <tr>
+      <td>
+        <span>{{ pid }}</span>
+        {% if meta.get('description') %}
+        <div class="c-dim" style="font-size:0.72rem;margin-top:2px">{{ meta.description }}</div>
+        {% endif %}
+      </td>
+      <td class="c-dim">{{ meta.category }}</td>
+      <td class="c-dim" style="font-size:0.75rem">{{ meta.detection_type }}</td>
+      <td class="c-dim">v{{ meta.version }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
 <div class="empty">
   <div class="empty-big">( no pattern data yet )</div>
   <div>patterns are scored once pages are scanned with <code>--save</code></div>
 </div>
+{% endif %}
 {% endif %}
 
 {% endblock %}

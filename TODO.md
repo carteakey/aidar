@@ -32,6 +32,7 @@ Roughly prioritized. Open an issue to claim something.
 - [x] Patterns page
 - [x] Submit / search site form
 - [x] Domain trend chart (published_date time series)
+- [ ] **Pattern explainer pages** — `/patterns/<pattern_id>` with description, example matches, threshold calibration, and historical avg score trend
 - [ ] **Public API docs page** — `/api/leaderboard`, `/api/domain/<domain>`
 - [ ] **RSS feed** — `/feed.xml` of recently scanned sites
 - [ ] **Embed badge** — `![aidar score](https://aidar.lol/badge/carteakey.dev)` for sites to display
