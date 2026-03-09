@@ -1,5 +1,5 @@
 id: short_punchy_fragments
-version: 1
+version: 2
 name: Short Punchy Fragments
 description: >
   Excessive use of very short sentences or sentence fragments as standalone
@@ -33,6 +33,10 @@ params:
     # Three or more consecutive very short sentences (each under ~40 chars).
     # Matches the rapid-fire staccato rhythm that AI uses for dramatic effect.
     - '(?:[A-Z][^.!?\n]{1,38}[.!?][ \t]){3,}'
+
+    # "And honestly? That's rare." / "Honestly? It works." — the dramatic-pause reveal.
+    # AI uses "honestly?" as a manufactured suspense beat before an unremarkable observation.
+    - '(?i)\b(?:and\s+)?honestly\?'
 
   per_n_words: 1000
   threshold_low: 1.5

@@ -1,0 +1,51 @@
+id: ai_section_headers
+version: 1
+name: AI-Cliché Section Headers
+description: >
+  AI content generators reflexively label sections with formulaic headings:
+  "Why This Matters", "Key Takeaways", "Final Thoughts", "The Takeaway",
+  "What's Next", "Moving Forward". These headers signal structure-for-structure's-sake
+  — bureaucratic scaffolding imposed regardless of whether the content warrants it.
+  Human writers rarely need to announce that their conclusion is "In Conclusion."
+  Detected in HTML heading tags (h2-h4); falls back to markdown ## syntax.
+category: tropes
+weight: 0.85
+detection_type: html_regex
+severity: high
+references:
+  - https://tropes.fyi/directory
+  - https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+params:
+  # HTML patterns — run against raw HTML source (re.IGNORECASE | re.DOTALL applied)
+  # Uses .{0,N}? (non-greedy DOTALL) to handle inner <a> anchor tags that many CMSes
+  # (dev.to, Ghost, Hugo) inject before heading text. Closes on </h to bound the match.
+  patterns:
+    # "Why X Matters" / "Why This Works" / "What This Means For You"
+    - '<h[2-4]\b[^>]*>.{0,300}?(?:why\s+(?:this|it|that|they|you)\s+(?:matters?|works?|is\s+important|counts?)|what\s+(?:this|it)\s+means?\s+for).{0,200}?</h'
+
+    # "The Problem" / "The Solution" / "The Takeaway" / "The Bottom Line" etc.
+    - '<h[2-4]\b[^>]*>.{0,300}?the\s+(?:problem|solution|challenge|answer|result|truth|catch|reality|verdict|big\s+picture|bottom\s+line|real\s+(?:question|issue)|elephant\s+in\s+the\s+room|good\s+news|bad\s+news|takeaway|twist|kicker).{0,200}?</h'
+
+    # Closing / summary headers
+    - '<h[2-4]\b[^>]*>.{0,300}?(?:key\s+(?:takeaways?|insights?|points?|lessons?)|final\s+(?:thoughts?|words?|note|reflections?)|closing\s+(?:thoughts?|words?)|in\s+(?:conclusion|summary|closing)|to\s+(?:sum\s+up|wrap\s+(?:things\s+)?up|conclude)|tl[;,]?dr|bottom\s+line).{0,200}?</h'
+
+    # "What's Next" / "Moving Forward" / "Looking Ahead" / "Next Steps"
+    - '<h[2-4]\b[^>]*>.{0,300}?(?:what''?s\s+next|moving\s+forward|looking\s+ahead|the\s+road\s+ahead|next\s+steps?|where\s+(?:do\s+we\s+go|to\s+go)\s+from\s+here|going\s+forward|the\s+path\s+(?:forward|ahead)).{0,200}?</h'
+
+    # Onboarding openers
+    - '<h[2-4]\b[^>]*>.{0,300}?(?:getting\s+started|let''?s\s+(?:get\s+started|dive\s+in|begin)|setting\s+the\s+(?:stage|scene)|first\s+things?\s+first|before\s+we\s+(?:begin|start|dive)).{0,200}?</h'
+
+    # "Why I Wrote This" / "A Note On" / "Quick Note" / "Disclaimer"
+    - '<h[2-4]\b[^>]*>.{0,300}?(?:why\s+i\s+(?:wrote|made|built|created|decided)|a\s+(?:quick\s+)?note\s+(?:on|about)|disclaimer|full\s+disclosure|before\s+you\s+(?:read|continue|go)).{0,200}?</h'
+
+  # Plain-text fallback — markdown ## headings and also plain heading lines from
+  # extracted text (trafilatura often emits heading text as bare lines with no markup)
+  text_patterns:
+    # Markdown headings
+    - '(?im)^#{2,4}\s+(?:Why\s+(?:This|It|That|They)\s+(?:Matters?|Works?|Is\s+Important|Counts?)|What''?s?\s+Next|Key\s+Takeaways?|Final\s+Thoughts?|The\s+(?:Problem|Solution|Challenge|Catch|Truth|Reality|Bottom\s+Line|Big\s+Picture|Verdict|Takeaway|Kicker)|Moving\s+Forward|Looking\s+Ahead|In\s+(?:Conclusion|Summary|Closing)|To\s+(?:Sum\s+Up|Wrap\s+Up)|Getting\s+Started|Next\s+Steps?|TL;?DR)\s*$'
+    # Bare heading lines in extracted text (e.g. trafilatura output from HTML articles)
+    - '(?m)^(?:Why\s+(?:This|It|That)\s+Matters?|Key\s+Takeaways?|Final\s+Thoughts?|The\s+(?:Takeaway|Bottom\s+Line|Big\s+Picture|Problem|Solution|Verdict|Kicker)|Moving\s+Forward|Looking\s+Ahead|In\s+(?:Conclusion|Summary)|What''?s\s+Next|Next\s+Steps?|Getting\s+Started|TL;?DR)\s*$'
+
+  per_n_words: 1000
+  threshold_low: 0.5
+  threshold_high: 4.0

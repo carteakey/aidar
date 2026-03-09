@@ -46,6 +46,15 @@ Pattern version bumps are noted separately from tool version bumps.
 
 ## Pattern Changes
 
+### [ai_section_headers v1] — 2026-03-09
+New pattern. `html_regex` detector for AI-cliché section heading content: "The Takeaway", "The Problem", "Why This Matters", "Key Takeaways", "Moving Forward", "What's Next", "Getting Started", "In Conclusion". Uses DOTALL `.{0,N}?` matching to handle inner anchor tags (`<a name="...">`) that CMSes like dev.to, Ghost, and Hugo inject inside heading elements. Falls back to bare heading-line matching in extracted text.
+
+### [second_person_address v2] — 2026-03-09
+New pattern. Frequency detector for reader-directed rhetorical constructions: "We've all been there", "You might be wondering", "Picture this", "Sound familiar?", "Let me walk you through", "Have you ever". Includes the "Here's how it actually went/worked/happened" reveal formula — ubiquitous in AI-assisted dev.to/LinkedIn/Substack posts.
+
+### [short_punchy_fragments v2] — 2026-03-09
+Added "And honestly?" / "Honestly?" as a regex pattern — the AI dramatic-pause reveal construction ("And honestly? I lost all motivation.") identified in HN discussion as an emerging Claude-specific tell.
+
 ### [bold_first_bullets v2] — 2026-03-09
 Migrated to `html_regex` detection type. Now runs against raw HTML source, detecting `<li>...<strong>` patterns (including icon-prefixed bullets common in AI-generated docs). Falls back to markdown `**` syntax detection for plain-text input.
 

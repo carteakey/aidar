@@ -1,0 +1,86 @@
+id: second_person_address
+version: 2
+name: Second-Person Direct Address
+description: >
+  AI content reflexively addresses the reader directly with rhetorical constructions
+  designed to create fake intimacy: "We've all been there", "You might be wondering",
+  "Picture this", "Sound familiar?", "Let me walk you through". Also includes the
+  "Here's how it actually went/worked" reveal formula — extremely common in AI-assisted
+  dev.to/LinkedIn/Substack posts where the title promises a personal story and the AI
+  structures it as a guided walkthrough. Human bloggers use some of these — but rarely
+  five times per essay.
+category: phrases
+weight: 0.70
+detection_type: frequency
+severity: medium
+references:
+  - https://news.ycombinator.com/item?id=47279741
+params:
+  terms:
+    # Fake intimacy / shared experience
+    - "we've all been there"
+    - "we all know"
+    - "we all"
+    - "you're not alone"
+    - "sound familiar"
+    - "ring a bell"
+
+    # Anticipating reader thoughts
+    - "you might be wondering"
+    - "you might be thinking"
+    - "you might be asking"
+    - "you may be wondering"
+    - "you may be thinking"
+    - "i know what you're thinking"
+    - "i can hear you asking"
+
+    # Guided tour openers
+    - "let me walk you through"
+    - "let me show you"
+    - "let me explain"
+    - "let me break it down"
+    - "here's what you need to know"
+    - "here's what that means for you"
+
+    # Visualization prompts
+    - "picture this"
+    - "imagine you're"
+    - "imagine you are"
+    - "imagine this"
+    - "think about it"
+    - "think of it this way"
+
+    # Reader-outcome framing
+    - "by the end of this"
+    - "by the time you"
+    - "after reading this"
+    - "what you'll learn"
+    - "what you need to know"
+
+    # "Have you ever" pattern
+    - "have you ever"
+    - "chances are"
+    - "you've probably"
+    - "you probably"
+
+    # "Here's [reveal]" — the dramatic reveal construction ubiquitous in AI-assisted
+    # dev.to/LinkedIn/Substack posts. "Here's how it actually went."
+    # "Here's what I learned." "Here's why that matters." "Here's the thing."
+    - "here's how"
+    - "here's what"
+    - "here's why"
+    - "here's the thing"
+    - "here's where"
+    - "here's the kicker"
+    - "here's the catch"
+    - "here's the part"
+    - "here's what happened"
+    - "here's what changed"
+    - "here's what i learned"
+    - "here's what worked"
+    - "here's what didn't"
+
+  match_mode: contains
+  per_n_words: 1000
+  threshold_low: 1.0
+  threshold_high: 8.0
