@@ -122,8 +122,50 @@ def _sitemap_worker(base_url: str, queue) -> None:
         queue.put([])
 
 
+def _sitemap_direct(base_url: str) -> list[str]:
+    """
+    Fallback sitemap parser for sitemaps that use relative <loc> entries.
+    trafilatura's sitemap_search silently drops relative URLs, so this fetches
+    sitemap.xml directly and resolves all <loc> values against the base URL.
+    Tries sitemap.xml and sitemap_index.xml.
+    """
+    import re
+    import httpx
+
+    candidates = [
+        f"{base_url.rstrip('/')}/sitemap.xml",
+        f"{base_url.rstrip('/')}/sitemap_index.xml",
+    ]
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; aidar/0.1)"}
+
+    for sitemap_url in candidates:
+        try:
+            r = httpx.get(sitemap_url, timeout=15, follow_redirects=True, headers=headers)
+            if r.status_code != 200:
+                continue
+            raw_locs = re.findall(r"<loc>([^<]+)</loc>", r.text)
+            if not raw_locs:
+                continue
+            urls = []
+            for loc in raw_locs:
+                loc = loc.strip()
+                if loc.startswith(("http://", "https://")):
+                    urls.append(loc)
+                elif loc.startswith("/"):
+                    urls.append(base_url.rstrip("/") + loc)
+            if urls:
+                return urls
+        except Exception:
+            continue
+    return []
+
+
 def _from_sitemap(base_url: str, timeout: int = 30) -> list[str]:
-    """Try to extract URLs from sitemap.xml / sitemap_index.xml."""
+    """
+    Try to extract URLs from sitemap.xml / sitemap_index.xml.
+    First attempts trafilatura's sitemap_search (handles complex sitemap indexes).
+    Falls back to direct XML parsing when the sitemap uses relative <loc> entries.
+    """
     import multiprocessing
     queue = multiprocessing.Queue()
     p = multiprocessing.Process(target=_sitemap_worker, args=(base_url, queue))
@@ -134,7 +176,11 @@ def _from_sitemap(base_url: str, timeout: int = 30) -> list[str]:
         p.terminate()
         p.join()
         return []
-    return queue.get() if not queue.empty() else []
+    urls = queue.get() if not queue.empty() else []
+    if not urls:
+        # trafilatura returned nothing — try direct parse (handles relative <loc> sitemaps)
+        urls = _sitemap_direct(base_url)
+    return urls
 
 
 def _from_rss(base_url: str) -> list[str]:

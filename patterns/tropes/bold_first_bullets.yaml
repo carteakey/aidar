@@ -1,23 +1,36 @@
 id: bold_first_bullets
-version: 1
+version: 2
 name: Bold-First Bullets
 description: >
   Every bullet point or list item starts with a bolded phrase or sentence.
   Extremely common in Claude and ChatGPT markdown output. Almost nobody formats
   lists this way when writing by hand. A telltale sign of AI-generated
   documentation, blog posts, and README files (especially paired with emojis).
+  Detected in raw HTML via <li><strong> patterns; falls back to markdown **
+  syntax when raw HTML is not available (e.g. --text input or .md files).
 category: tropes
 weight: 0.85
-detection_type: regex
+detection_type: html_regex
 severity: high
 references:
   - https://tropes.fyi/directory
 params:
+  # HTML patterns — run against raw HTML source
   patterns:
-    # Unordered list item where first content is bold: "- **Keyword**: description"
-    - '(?m)^\s*[-*+]\s+\*\*[^*\n]+\*\*'
+    # <li> where <strong> or <b> is the first substantive content.
+    # Allows for inline icons/SVGs/spans before the bold text (common in AI-generated
+    # docs that prepend emoji or icon elements before each bold label).
+    # The .{0,400} window covers typical icon markup (SVG, <i>, <span>) before bold.
+    - '<li\b[^>]*>.{0,400}?<(?:strong|b)\b[^>]*>'
 
-    # Ordered list item where first content is bold: "1. **Keyword**: description"
+    # <dt> (definition term) starting with bold — another AI list-formatting tell
+    - '<dt\b[^>]*>.{0,100}?<(?:strong|b)\b[^>]*>'
+
+  # Plain-text fallback patterns — used when raw_html is not available
+  text_patterns:
+    # Markdown unordered list item: "- **Keyword**: description"
+    - '(?m)^\s*[-*+]\s+\*\*[^*\n]+\*\*'
+    # Markdown ordered list item: "1. **Keyword**: description"
     - '(?m)^\s*\d+\.\s+\*\*[^*\n]+\*\*'
 
   per_n_words: 1000

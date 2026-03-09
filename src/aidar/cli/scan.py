@@ -60,6 +60,12 @@ console = Console()
     show_default=True,
     help="Delay in seconds between requests per domain (rate limiting)",
 )
+@click.option(
+    "--min-words",
+    default=50,
+    show_default=True,
+    help="Skip pages with fewer than this many extracted words (nav pages, stubs, etc.)",
+)
 @click.pass_context
 def scan(
     ctx: click.Context,
@@ -69,6 +75,7 @@ def scan(
     db_path: str,
     skip_existing: bool,
     delay: float,
+    min_words: int,
 ) -> None:
     """Async bulk scan of URLs from a batch file."""
     urls = _load_urls(batch_file)
@@ -97,9 +104,9 @@ def scan(
         console.print("[green]All URLs already scanned.[/green]")
         return
 
-    console.print(f"[bold]Scanning {len(urls)} URLs (concurrency={concurrency})...[/bold]")
+    console.print(f"[bold]Scanning {len(urls)} URLs (concurrency={concurrency}, min-words={min_words})...[/bold]")
     results = asyncio.run(
-        _bulk_scan(urls, analyzer, config, concurrency, delay)
+        _bulk_scan(urls, analyzer, config, concurrency, delay, min_words)
     )
 
     if save and conn:
@@ -122,7 +129,7 @@ def _load_urls(path: str) -> list[str]:
     return [l.strip() for l in lines if l.strip() and not l.startswith("#")]
 
 
-async def _bulk_scan(urls, analyzer, config, concurrency, delay):
+async def _bulk_scan(urls, analyzer, config, concurrency, delay, min_words=50):
     semaphore = asyncio.Semaphore(concurrency)
     results = []
 
@@ -137,7 +144,7 @@ async def _bulk_scan(urls, analyzer, config, concurrency, delay):
 
         async with httpx.AsyncClient(timeout=30) as client:
             tasks = [
-                _scan_one(url, analyzer, config, client, semaphore, delay, progress, task)
+                _scan_one(url, analyzer, config, client, semaphore, delay, progress, task, min_words)
                 for url in urls
             ]
             raw_results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -151,13 +158,15 @@ async def _bulk_scan(urls, analyzer, config, concurrency, delay):
     return results
 
 
-async def _scan_one(url, analyzer, config, client, semaphore, delay, progress, task_id):
+async def _scan_one(url, analyzer, config, client, semaphore, delay, progress, task_id, min_words=50):
     async with semaphore:
         try:
             if delay > 0:
                 await asyncio.sleep(delay)
             fetch = await fetch_url_async(url, client)
-            score_vector = analyzer.run(fetch.text, fetch.word_count)
+            if fetch.word_count < min_words:
+                return None
+            score_vector = analyzer.run(fetch.text, fetch.word_count, raw_html=fetch.raw_html)
             result = compute_aggregate(
                 score_vector, config,
                 url=url,

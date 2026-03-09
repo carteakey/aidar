@@ -18,7 +18,7 @@ class RegexDetector(BaseDetector):
             for p in raw_patterns
         ]
 
-    def detect(self, text: str, word_count: int) -> PatternResult:
+    def detect(self, text: str, word_count: int, raw_html: str | None = None) -> PatternResult:
         per_n = int(self.pattern.params.get("per_n_words", 1000))
         total_matches = sum(len(r.findall(text)) for r in self._compiled)
         raw = (total_matches / max(word_count, 1)) * per_n

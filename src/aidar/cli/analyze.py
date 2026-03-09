@@ -79,7 +79,7 @@ def analyze(
         )
 
     # Run analysis
-    score_vector = analyzer.run(fetch.text, fetch.word_count)
+    score_vector = analyzer.run(fetch.text, fetch.word_count, raw_html=fetch.raw_html)
     result = compute_aggregate(
         score_vector, config,
         url=url, file_path=file_path,

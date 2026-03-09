@@ -27,11 +27,15 @@ cp .env.example .env  # fill Litestream/R2 credentials
 # Analyze a single page
 aidar analyze https://example.com
 
+# Analyze raw text directly
+aidar analyze --text "paste your article here"
+
 # Compare multiple pages side by side
 aidar compare https://site1.com https://site2.com https://site3.com
 
-# Bulk scan from a URL list, save to DB
-aidar scan --batch urls.txt --concurrency 20 --save
+# Discover all pages on a site, then bulk scan
+aidar discover example.com -o urls.txt
+aidar scan --batch urls.txt --concurrency 20 --min-words 50 --save
 
 # Inspect loaded signal patterns
 aidar patterns list
@@ -55,13 +59,14 @@ Saved operational runbook: [`docs/HN_RUNBOOK.md`](docs/HN_RUNBOOK.md).
 
 ## Signal categories
 
-| Category    | Examples                                              |
-|-------------|-------------------------------------------------------|
-| phrases     | "delve into", "it's worth noting", "key takeaway"    |
-| punctuation | em dash frequency, ellipsis overuse                   |
-| structure   | bullet point density, header frequency               |
-| vocabulary  | formal register words, rare/sophisticated vocabulary |
-| emoji       | emoji density and placement                           |
+| Category    | Weight | Examples                                                                                  |
+|-------------|--------|-------------------------------------------------------------------------------------------|
+| tropes      | 0.40   | negative parallelism, em-dash addiction, bold-first bullets, "here's the kicker", tricolon abuse, signposted conclusions, grandiose stakes inflation |
+| phrases     | 0.20   | "delve into", "it's worth noting", "let's explore", "key takeaway"                       |
+| punctuation | 0.15   | em dash frequency, ellipsis overuse, semicolon density                                   |
+| structure   | 0.10   | bullet point density, header frequency, sentence burstiness, question avoidance          |
+| vocabulary  | 0.10   | magic adverbs (quietly, fundamentally), "serves as" dodge, tapestry/landscape, formal register |
+| emoji       | 0.05   | emoji density and placement                                                              |
 
 ## Pattern repository
 

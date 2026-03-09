@@ -32,7 +32,7 @@ def _split_sentences(text: str) -> list[str]:
 class LinguisticDetector(BaseDetector):
     """Analyzes linguistic properties: sentence burstiness, TTR, question rate, etc."""
 
-    def detect(self, text: str, word_count: int) -> PatternResult:
+    def detect(self, text: str, word_count: int, raw_html: str | None = None) -> PatternResult:
         metric = self.pattern.params["metric"]
 
         if metric == "sentence_burstiness":

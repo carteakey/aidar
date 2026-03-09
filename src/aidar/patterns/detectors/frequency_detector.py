@@ -13,7 +13,7 @@ class FrequencyDetector(BaseDetector):
         self._terms: list[str] = [t.lower() for t in pattern.params.get("terms", [])]
         self._match_mode: str = pattern.params.get("match_mode", "contains")
 
-    def detect(self, text: str, word_count: int) -> PatternResult:
+    def detect(self, text: str, word_count: int, raw_html: str | None = None) -> PatternResult:
         per_n = int(self.pattern.params.get("per_n_words", 1000))
         text_lower = text.lower()
         total = 0

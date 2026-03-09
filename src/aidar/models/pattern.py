@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-DetectionType = Literal["regex", "frequency", "structural", "linguistic"]
+DetectionType = Literal["regex", "html_regex", "frequency", "structural", "linguistic"]
 Category = Literal["tropes", "punctuation", "phrases", "structure", "emoji", "vocabulary"]
 Severity = Literal["low", "medium", "high"]
 
@@ -33,7 +33,7 @@ class PatternDef:
                 f"Pattern '{self.id}': invalid category '{self.category}'. "
                 f"Must be one of {valid_categories}"
             )
-        valid_detection_types = {"regex", "frequency", "structural", "linguistic"}
+        valid_detection_types = {"regex", "html_regex", "frequency", "structural", "linguistic"}
         if self.detection_type not in valid_detection_types:
             raise ValueError(
                 f"Pattern '{self.id}': invalid detection_type '{self.detection_type}'. "

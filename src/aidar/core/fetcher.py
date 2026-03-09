@@ -18,13 +18,14 @@ class FetchError(Exception):
 
 class FetchResult:
     """Holds extracted text plus any metadata trafilatura could extract."""
-    __slots__ = ("text", "word_count", "title", "published_date")
+    __slots__ = ("text", "word_count", "title", "published_date", "raw_html")
 
-    def __init__(self, text: str, word_count: int, title: str | None = None, published_date: str | None = None):
+    def __init__(self, text: str, word_count: int, title: str | None = None, published_date: str | None = None, raw_html: str | None = None):
         self.text = text
         self.word_count = word_count
         self.title = title
         self.published_date = published_date  # ISO date string e.g. "2024-03-15" or None
+        self.raw_html = raw_html  # Original HTML source for HTML-level pattern detectors
 
 
 def _extract(html: str) -> FetchResult:
@@ -41,13 +42,14 @@ def _extract(html: str) -> FetchResult:
         text = trafilatura.extract(html, include_tables=True, no_fallback=False)
         if not text or len(text.split()) < 20:
             return None
-        return FetchResult(text=text, word_count=count_words(text))
+        return FetchResult(text=text, word_count=count_words(text), raw_html=html)
 
     return FetchResult(
         text=doc.text,
         word_count=count_words(doc.text),
         title=doc.title or None,
         published_date=doc.date or None,
+        raw_html=html,
     )
 
 
@@ -81,7 +83,7 @@ def read_file(path: Path) -> FetchResult:
         result = _extract(raw)
         if result:
             return result
-        return FetchResult(text=raw, word_count=count_words(raw))
+        return FetchResult(text=raw, word_count=count_words(raw), raw_html=raw)
 
     if not raw.strip():
         raise FetchError(f"File is empty: {path}")

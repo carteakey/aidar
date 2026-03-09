@@ -29,7 +29,7 @@ _EMOJI_RE = re.compile(
 class StructuralDetector(BaseDetector):
     """Analyzes document-level structural shape metrics."""
 
-    def detect(self, text: str, word_count: int) -> PatternResult:
+    def detect(self, text: str, word_count: int, raw_html: str | None = None) -> PatternResult:
         metric = self.pattern.params["metric"]
 
         if metric == "bullet_density":

@@ -8,14 +8,14 @@ class Analyzer:
     def __init__(self, registry: PatternRegistry) -> None:
         self.registry = registry
 
-    def run(self, text: str, word_count: int) -> ScoreVector:
+    def run(self, text: str, word_count: int, raw_html: str | None = None) -> ScoreVector:
         """Run all patterns against text, aggregate into ScoreVector."""
         results: list[PatternResult] = []
 
         for pattern in self.registry.all_patterns():
             try:
                 detector = self.registry.get_detector(pattern.id)
-                result = detector.detect(text, word_count)
+                result = detector.detect(text, word_count, raw_html=raw_html)
                 results.append(result)
             except Exception:
                 # Skip failed patterns rather than crashing the whole analysis

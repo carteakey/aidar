@@ -14,10 +14,11 @@ class BaseDetector(ABC):
         self.pattern_hash = pattern.fingerprint()
 
     @abstractmethod
-    def detect(self, text: str, word_count: int) -> PatternResult:
+    def detect(self, text: str, word_count: int, raw_html: str | None = None) -> PatternResult:
         """
         Run detection against `text`.
         `word_count` is pre-computed to avoid re-counting per detector.
+        `raw_html` is the original HTML source, available for HTML-level detectors.
         Returns a PatternResult with raw_value and normalized_score filled.
         """
         ...
