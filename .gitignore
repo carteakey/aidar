@@ -27,3 +27,4 @@ aidar.db-wal
 .*.db-litestream/
 .db-backups/
 inbox
+uv.lock
