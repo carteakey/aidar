@@ -285,6 +285,13 @@ def get_global_stats(conn: sqlite3.Connection) -> dict:
     return dict(row) if row else {}
 
 
+def delete_domain(conn: sqlite3.Connection, domain: str) -> int:
+    """Delete all scans (and cascaded pattern_scores) for a domain. Returns row count."""
+    cur = conn.execute("DELETE FROM scans WHERE domain = ?", (domain,))
+    conn.commit()
+    return cur.rowcount
+
+
 def get_domain_leaderboard(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
     """Return per-domain aggregated stats for the leaderboard."""
     rows = conn.execute(

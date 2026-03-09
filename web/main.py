@@ -15,6 +15,7 @@ from fastapi.templating import Jinja2Templates
 
 from aidar.db.database import get_connection
 from aidar.db.queries import (
+    delete_domain,
     get_corpus_percentile,
     get_domain_extremes,
     get_domain_leaderboard,
@@ -26,6 +27,7 @@ from aidar.db.queries import (
 )
 
 DB_PATH = os.environ.get("AIDAR_DB", "aidar.db")
+ADMIN_KEY = os.environ.get("AIDAR_ADMIN_KEY", "")
 
 app = FastAPI(title="aidar.lol", docs_url=None, redoc_url=None)
 
@@ -242,8 +244,26 @@ async def domain_page(request: Request, domain: str, sort: str = "recent"):
             "top_pages": top_pages,
             "bottom_pages": bottom_pages,
             "sort": sort,
+            "admin_key_set": bool(ADMIN_KEY),
         },
     )
+
+
+@app.post("/admin/delete-domain", response_class=HTMLResponse)
+async def admin_delete_domain(request: Request):
+    from fastapi.responses import RedirectResponse
+
+    if not ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="Admin key not configured.")
+    form = await request.form()
+    key = str(form.get("admin_key", ""))
+    domain = str(form.get("domain", "")).strip()
+    if key != ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="Invalid admin key.")
+    if not domain:
+        raise HTTPException(status_code=400, detail="No domain specified.")
+    deleted = delete_domain(get_conn(), domain)
+    return RedirectResponse(url=f"/?deleted={domain}&rows={deleted}", status_code=303)
 
 
 @app.get("/patterns", response_class=HTMLResponse)

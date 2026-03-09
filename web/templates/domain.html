@@ -83,26 +83,31 @@
 </div>
 
 {% if trend and trend | length > 1 %}
+{% set trend_shown = trend[-120:] %}
 <div class="section-header" style="margin-top:2rem">
   <span class="section-title">score over time (by publish date)</span>
-  <span class="c-dim" style="font-size:0.75rem">{{ trend | length }} dated articles</span>
+  <span class="c-dim" style="font-size:0.75rem">
+    {{ trend | length }} dated articles{% if trend | length > 120 %}, showing most recent 120{% endif %}
+  </span>
 </div>
-<div style="display:flex; align-items:flex-end; gap:3px; height:60px; margin-bottom:2rem;">
-  {% for row in trend %}
+<div style="overflow-x:auto; overflow-y:visible; margin-bottom:2rem;">
+<div style="display:flex; align-items:flex-end; gap:3px; height:60px; min-width:{{ trend_shown | length * 8 }}px;">
+  {% for row in trend_shown %}
   {% set s = row.score %}
   {% if s >= 30 %}{% set bc = "#f87171" %}
   {% elif s >= 15 %}{% set bc = "#facc15" %}
   {% else %}{% set bc = "#4ade80" %}{% endif %}
   <div title="{{ row.published_date }}: {{ s }}/100{{ ' — ' + row.title if row.title else '' }}"
-    style="flex:1; background:{{ bc }}; height:{{ [s * 2, 4] | max }}px; min-width:4px; opacity:0.8; cursor:default;"></div>
+    style="flex:1; background:{{ bc }}; height:{{ [s * 2, 4] | max }}px; min-width:6px; opacity:0.8; cursor:default;"></div>
   {% endfor %}
+</div>
 </div>
 {% endif %}
 
 {% if scans %}
 <!-- avg category breakdown from most recent scans -->
 {% set recent = scans[:20] %}
-{% set cat_keys = ['phrases', 'punctuation', 'structure', 'vocabulary', 'emoji'] %}
+{% set cat_keys = ['phrases', 'punctuation', 'structure', 'vocabulary', 'tropes', 'emoji'] %}
 {% set cat_avgs = {} %}
 {% for cat in cat_keys %}
   {% set vals = [] %}
@@ -116,7 +121,6 @@
   {% endif %}
 {% endfor %}
 
-{% if cat_avgs %}
 <div class="section-header" style="margin-top:2rem">
   <span class="section-title">signal breakdown (avg, recent {{ recent|length }} pages)</span>
 </div>
@@ -135,7 +139,6 @@
   </div>
   {% endfor %}
 </div>
-{% endif %}
 
 {% if top_pages or bottom_pages %}
 <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-top:2rem;">
@@ -223,6 +226,24 @@
     {% endfor %}
   </tbody>
 </table>
+{% endif %}
+
+{% if admin_key_set %}
+<details style="margin-top:3rem; border:1px solid var(--border); padding:0.75rem 1rem;">
+  <summary style="cursor:pointer; color:var(--fg-dim); font-size:0.8rem;">⚙ admin</summary>
+  <form method="post" action="/admin/delete-domain"
+        onsubmit="return confirm('Delete ALL scans for {{ domain }}? This cannot be undone.');"
+        style="display:flex; gap:0.5rem; align-items:center; margin-top:0.75rem; flex-wrap:wrap;">
+    <input type="hidden" name="domain" value="{{ domain }}">
+    <input type="password" name="admin_key" placeholder="admin key" required
+           style="font-size:0.8rem; padding:0.3rem 0.5rem; background:var(--bg-card); border:1px solid var(--border); color:var(--fg); width:180px;">
+    <button type="submit"
+            style="font-size:0.8rem; padding:0.3rem 0.75rem; background:#7f1d1d; color:#fca5a5; border:1px solid #991b1b; cursor:pointer;">
+      delete domain
+    </button>
+    <span class="c-dim" style="font-size:0.75rem;">removes all {{ stats.scans }} scans for {{ domain }}</span>
+  </form>
+</details>
 {% endif %}
 
 {% endblock %}
