@@ -20,6 +20,8 @@ Pattern version bumps are noted separately from tool version bumps.
 - **Tropes Category**: Added `tropes` as the primary detection category with a leading weight of 0.40.
 - **Regex Detectors**: Support for Regex-based pattern matching in `PatternRegistry`.
 - **Scoring Engine**: Redistributed category weights to prioritize human-discernible writing tropes.
+- **Infrastructure**: Added pattern refresh worker, domain sync workflows, and HN sync runbook.
+- **Fixes**: Hardened sitemap discovery and configured SQLite artifacts to be ignored.
 
 ### [0.2.0] — 2026-02-26
 - **Pattern versioning**: `version` field in all YAML files; stored per-row in DB
@@ -32,6 +34,9 @@ Pattern version bumps are noted separately from tool version bumps.
 - **Threshold recalibration**: lowered to 15/30 based on observed scan data (was 30/65)
 - **`FetchResult`** object replaces bare tuples from fetcher functions
 - Web: submit-site form, domain trend chart, percentile display in leaderboard
+- **Web UI Polishing**: Switched font to IBM Plex Mono, added Dead Internet Theory & Stack sections to About page, and included local GIF scouter animation.
+- **Domain Dashboard**: Added top/bottom pages, sort controls, rate limiting, and raised scan limits. Share support via OG image and share button.
+- **Infrastructure**: Updated Litestream (0.5.9) with fallback to `SEED_DB_URL` in `start.sh`, added `track-and-sync` script with permanent Heroku token support.
 
 ### [0.1.0] — 2026-02-25
 - Initial release: 12 patterns, `analyze`, `compare`, `scan`, `patterns` CLI commands
