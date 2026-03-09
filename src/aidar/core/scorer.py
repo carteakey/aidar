@@ -16,7 +16,8 @@ def compute_aggregate(
     """Weighted sum of category scores → 0-100 aggregate with label."""
     weights = config.weights
     raw = (
-        score_vector.punctuation * weights.punctuation
+        score_vector.tropes * weights.tropes
+        + score_vector.punctuation * weights.punctuation
         + score_vector.phrases * weights.phrases
         + score_vector.structure * weights.structure
         + score_vector.emoji * weights.emoji

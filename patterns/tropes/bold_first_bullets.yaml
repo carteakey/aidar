@@ -1,0 +1,25 @@
+id: bold_first_bullets
+version: 1
+name: Bold-First Bullets
+description: >
+  Every bullet point or list item starts with a bolded phrase or sentence.
+  Extremely common in Claude and ChatGPT markdown output. Almost nobody formats
+  lists this way when writing by hand. A telltale sign of AI-generated
+  documentation, blog posts, and README files (especially paired with emojis).
+category: tropes
+weight: 0.85
+detection_type: regex
+severity: high
+references:
+  - https://tropes.fyi/directory
+params:
+  patterns:
+    # Unordered list item where first content is bold: "- **Keyword**: description"
+    - '(?m)^\s*[-*+]\s+\*\*[^*\n]+\*\*'
+
+    # Ordered list item where first content is bold: "1. **Keyword**: description"
+    - '(?m)^\s*\d+\.\s+\*\*[^*\n]+\*\*'
+
+  per_n_words: 1000
+  threshold_low: 1.0
+  threshold_high: 8.0

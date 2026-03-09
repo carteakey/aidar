@@ -4,6 +4,9 @@ Roughly prioritized. Open an issue to claim something.
 
 ## Patterns
 
+- [ ] **Dead Metaphor detector** — latching onto one metaphor and repeating it 5–10× across a piece; requires tracking metaphor reuse semantically (NLP/embedding similarity)
+- [ ] **One-Point Dilution detector** — single argument restated in 10 different ways across thousands of words; requires semantic repetition detection across paragraphs
+- [ ] **Content Duplication detector** — verbatim repeated paragraphs within the same piece; requires paragraph-level fingerprinting/hashing
 - [ ] **Perplexity scoring** — real LLM perplexity via GPT-2 (`pip install aidar[nlp]`)
 - [ ] **Passive voice density** — AI overuses passive constructions
 - [ ] **Named entity sparsity** — AI avoids specific names, dates, places unless prompted

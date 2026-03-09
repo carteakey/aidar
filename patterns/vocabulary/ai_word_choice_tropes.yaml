@@ -1,0 +1,164 @@
+id: ai_word_choice_tropes
+version: 2
+name: AI Word Choice Tropes
+description: >
+  Word-level substitutions and phrasing patterns that signal AI authorship, drawn
+  from tropes.fyi. Covers four specific word-choice tells: (1) magic adverbs used
+  to inflate significance ("quietly", "fundamentally", "remarkably"); (2) the
+  "serves as" copula dodge that replaces simple "is/are" with pompous constructions;
+  (3) "Delve and Friends" — the infamous family of AI vocabulary shibboleths led
+  by "delve"; (4) ornate nouns like "tapestry" and "landscape" dropped in where
+  simpler words would do. These are stylistic tics at the word/phrase level rather
+  than sentence structure (structural/tonal patterns live in tropes/).
+category: vocabulary
+weight: 0.80
+detection_type: frequency
+severity: high
+references:
+  - https://tropes.fyi/directory
+params:
+  terms:
+    # ── Magic Adverbs ("Quietly" and Other Magic Adverbs) ────────────────────
+    # Overused adverbs that make mundane descriptions feel significant or weighty.
+    # AI reaches for these to convey subtle importance or understated power.
+    - "quietly orchestrat"
+    - "quietly transform"
+    - "quietly redefin"
+    - "quietly reshap"
+    - "quietly suffoc"
+    - "a quiet intelligence"
+    - "quietly becoming"
+    - "quietly building"
+    - "quietly changing"
+    - "deeply rooted in"
+    - "deeply committed"
+    - "deeply integrated"
+    - "fundamentally reshape"
+    - "fundamentally changes"
+    - "fundamentally different"
+    - "fundamentally transform"
+    - "fundamentally alter"
+    - "remarkably"
+    - "arguably the most"
+    - "arguably one of"
+    - "profoundly"
+    - "inherently"
+    - "intrinsically"
+
+    # ── The "Serves As" Dodge ─────────────────────────────────────────────────
+    # Replacing a simple "is/are" with a pompous copula alternative. AI avoids
+    # basic copulas because its repetition penalty pushes toward fancier constructions.
+    - "serves as a reminder"
+    - "serves as a testament"
+    - "serves as an example"
+    - "serves as a platform"
+    - "serves as a hub"
+    - "serves as a model"
+    - "serves as a foundation"
+    - "serves as a catalyst"
+    - "serves as a bridge"
+    - "serves as a vehicle"
+    - "serves as an anchor"
+    - "stands as a reminder"
+    - "stands as a testament"
+    - "stands as a symbol"
+    - "stands as a beacon"
+    - "marks a pivotal"
+    - "marks a significant"
+    - "represents a significant"
+    - "represents a major"
+    - "represents a fundamental"
+    - "represents a departure"
+
+    # ── "Delve" and Friends ───────────────────────────────────────────────────
+    # "Delve" went from rare to appearing in a staggering percentage of AI text.
+    # Part of a family of overused AI vocabulary. Single words detected via exact
+    # match or high-frequency substring.
+    - "let's delve"
+    - "let us delve"
+    - "delve into the"
+    - "delve deeper"
+    - "delve into this"
+    - "certainly,"
+    - "certainly."
+    - "utilize"
+    - "leverage the"
+    - "leverage our"
+    - "leverage their"
+    - "leverage this"
+    - "leveraging the"
+    - "leveraging our"
+    - "robust solution"
+    - "robust framework"
+    - "robust approach"
+    - "robust system"
+    - "robust set"
+    - "streamline the"
+    - "streamline your"
+    - "streamline operations"
+    - "streamline processes"
+    - "harness the power"
+    - "harness the potential"
+    - "harness the capabilities"
+    - "cutting-edge"
+    - "game-changing"
+    - "groundbreaking"
+    - "transformative impact"
+    - "transformative potential"
+    - "seamlessly integrat"
+    - "seamlessly connect"
+    - "unlock the potential"
+    - "unlock new possibilities"
+    - "unlock the power"
+    - "elevate your"
+    - "elevate the"
+    - "empower teams"
+    - "empower users"
+    - "empower individuals"
+    - "foster a culture"
+    - "foster innovation"
+    - "foster collaboration"
+    - "in today's fast-paced"
+    - "in today's rapidly"
+    - "in the ever-evolving"
+    - "ever-evolving landscape"
+    - "actionable insights"
+    - "valuable insights"
+    - "holistic approach"
+    - "comprehensive approach"
+
+    # ── "Tapestry" and "Landscape" (Ornate Noun Inflation) ───────────────────
+    # Overuse of grandiose or ornate nouns where simpler words would do.
+    # "Tapestry" for anything interconnected. "Landscape" for any field or domain.
+    - "tapestry of"
+    - "rich tapestry"
+    - "complex tapestry"
+    - "the landscape of"
+    - "across the landscape"
+    - "the broader landscape"
+    - "the current landscape"
+    - "the competitive landscape"
+    - "paradigm shift"
+    - "new paradigm"
+    - "the paradigm"
+    - "synergy between"
+    - "create synergy"
+    - "the ecosystem"
+    - "vibrant ecosystem"
+    - "thriving ecosystem"
+    - "the fabric of"
+    - "the very fabric"
+    - "the nexus of"
+    - "cornerstone of"
+    - "the cornerstone"
+    - "bedrock of"
+    - "the bedrock"
+    - "at the forefront of"
+    - "at the intersection of"
+    - "the mosaic of"
+    - "the pinnacle of"
+
+  match_mode: contains
+  per_n_words: 1000
+  threshold_low: 1.0
+  threshold_high: 10.0

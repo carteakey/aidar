@@ -6,6 +6,11 @@ aidar measures known stylistic signals — em dash frequency, hedging phrases, b
 
 Inspired by: [New accounts on Hacker News ten times more likely to use em-dashes](https://www.marginalia.nu/weird-ai-crap/hn/)
 
+## References
+
+- ["Wikipedia: Signs of AI writing"](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) — 2023–present
+- ["Tropes - AI Writing Pattern Directory"](https://tropes.fyi/), Ossama Chaib — 2026
+
 ## What it does
 
 - Scans URLs or local files and scores them across stylistic signal categories

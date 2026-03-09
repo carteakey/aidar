@@ -18,6 +18,7 @@ class PatternResult:
 
 @dataclass
 class ScoreVector:
+    tropes: float = 0.0
     punctuation: float = 0.0
     phrases: float = 0.0
     structure: float = 0.0
@@ -27,6 +28,7 @@ class ScoreVector:
 
     def as_dict(self) -> dict[str, float]:
         return {
+            "tropes": self.tropes,
             "punctuation": self.punctuation,
             "phrases": self.phrases,
             "structure": self.structure,

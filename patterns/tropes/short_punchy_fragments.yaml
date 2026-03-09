@@ -1,0 +1,39 @@
+id: short_punchy_fragments
+version: 1
+name: Short Punchy Fragments
+description: >
+  Excessive use of very short sentences or sentence fragments as standalone
+  paragraphs for manufactured emphasis. RLHF training has pushed models toward
+  "writing for readability" at the lowest common denominator: one thought per
+  sentence, no mental state-keeping required. Manifests as single-word adverbs
+  or prepositional phrases used as complete sentences — "Openly." "In a book."
+  "As a priest." — and sequences of 3+ back-to-back sentences each under six
+  words. No real person writes first drafts this way.
+category: tropes
+weight: 0.80
+detection_type: regex
+severity: medium
+references:
+  - https://tropes.fyi/directory
+params:
+  patterns:
+    # Single capitalized word used as a complete sentence, flanked by other sentences.
+    # Matches: "He published this. Openly. In a book."
+    # The lookbehind anchors to the end of a prior sentence; lookahead to next sentence start.
+    - '(?<=[.!?][ \t])[A-Z][a-z]{2,15}\.(?=[ \t][A-Z])'
+
+    # Short prepositional or adverbial phrase used as a standalone sentence (2–4 words).
+    # Matches: "In a book." "As a priest." "On purpose." "For free."
+    - '(?<=[.!?][ \t])(?:In|As|On|By|For|With|To|At|Of)\s+\w+(?:\s+\w+)?\.(?=[ \t][A-Z])'
+
+    # Whole line that is a single word followed by a period (standalone paragraph fragment).
+    # Matches a line that is entirely one capitalized word — "Brilliant." or "Devastating."
+    - '(?m)^[A-Z][a-z]{3,15}\.\s*$'
+
+    # Three or more consecutive very short sentences (each under ~40 chars).
+    # Matches the rapid-fire staccato rhythm that AI uses for dramatic effect.
+    - '(?:[A-Z][^.!?\n]{1,38}[.!?][ \t]){3,}'
+
+  per_n_words: 1000
+  threshold_low: 1.5
+  threshold_high: 8.0

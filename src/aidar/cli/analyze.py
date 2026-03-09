@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 from aidar.cli.main import aidar
-from aidar.core.fetcher import FetchError, fetch_url, read_file
+from aidar.core.fetcher import FetchError, FetchResult, count_words, fetch_url, read_file
 from aidar.core.scorer import compare_model_profile, compute_aggregate
 from aidar.output.formatters import to_json
 from aidar.output.renderer import render_error, render_result
@@ -13,7 +13,13 @@ from aidar.patterns.loader import load_model_profile, PatternLoadError
 
 
 @aidar.command()
-@click.argument("target")
+@click.argument("target", required=False, default=None)
+@click.option(
+    "--text",
+    default=None,
+    metavar="TEXT",
+    help="Analyze raw text directly instead of a URL or file path.",
+)
 @click.option(
     "--compare-model",
     default=None,
@@ -34,12 +40,13 @@ from aidar.patterns.loader import load_model_profile, PatternLoadError
 @click.pass_context
 def analyze(
     ctx: click.Context,
-    target: str,
+    target: str | None,
+    text: str | None,
     compare_model: str | None,
     min_words: int,
     verbose: bool,
 ) -> None:
-    """Analyze a URL or local file for AI-generated stylistic signals."""
+    """Analyze a URL, local file, or raw text for AI-generated stylistic signals."""
     analyzer = ctx.obj["analyzer"]
     config = ctx.obj["config"]
     output_format = ctx.obj["output"]
@@ -47,12 +54,19 @@ def analyze(
 
     # Fetch text
     try:
-        if target.startswith(("http://", "https://")):
-            fetch = fetch_url(target)
-            url, file_path = target, None
+        if text is not None:
+            wc = count_words(text)
+            fetch = FetchResult(text=text, word_count=wc)
+            url, file_path = None, None
+        elif target is not None:
+            if target.startswith(("http://", "https://")):
+                fetch = fetch_url(target)
+                url, file_path = target, None
+            else:
+                fetch = read_file(Path(target))
+                url, file_path = None, target
         else:
-            fetch = read_file(Path(target))
-            url, file_path = None, target
+            raise click.UsageError("Provide a TARGET (URL or file path) or use --text TEXT.")
     except FetchError as e:
         render_error(str(e))
         raise SystemExit(1)

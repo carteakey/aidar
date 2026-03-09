@@ -1,0 +1,34 @@
+id: tricolon_abuse
+version: 1
+name: Tricolon Abuse
+description: >
+  Overuse of the rule-of-three pattern, often extended to four or five, and
+  frequently stacked back-to-back. A single tricolon is elegant; three consecutive
+  tricolons is a pattern recognition failure. Most visibly appears as three
+  semicolon-joined parallel clauses — "Products impress people; platforms empower
+  them; participants thrive" — or comma-separated triplets of similar-length
+  noun phrases.
+category: tropes
+weight: 0.80
+detection_type: regex
+severity: medium
+references:
+  - https://tropes.fyi/directory
+params:
+  patterns:
+    # Three semicolon-joined parallel clauses within a single sentence.
+    # Matches: "Products impress people; platforms empower them; participants thrive."
+    # Segments must be 10–90 chars each to avoid matching CSV lists or code.
+    - '[A-Z][^.;!?\n]{10,90};\s*[^.;!?\n]{10,90};\s*[^.;!?\n]{10,90}[.!?]'
+
+    # Comma-separated triplet of noun phrases/clauses (each 5–60 chars), then "and".
+    # Matches: "innovation, execution, and impact" or longer parallel clause triplets.
+    # The word boundary before the third element guards against ordinary lists.
+    - '\b[^,\n]{10,60},\s+[^,\n]{10,60},\s+and\s+[^,.\n]{10,60}[.,]'
+
+    # "not just X, not just Y" — the negation tricolon AI loves
+    - '(?:not just [^,\n]{5,50},\s*){2}not just\b'
+
+  per_n_words: 1000
+  threshold_low: 0.5
+  threshold_high: 4.0

@@ -9,6 +9,11 @@ Pattern version bumps are noted separately from tool version bumps.
 
 ## Tool Changes
 
+### [0.3.0] — 2026-03-09
+- **Tropes Category**: Added `tropes` as the primary detection category with a leading weight of 0.40.
+- **Regex Detectors**: Support for Regex-based pattern matching in `PatternRegistry`.
+- **Scoring Engine**: Redistributed category weights to prioritize human-discernible writing tropes.
+
 ### [0.2.0] — 2026-02-26
 - **Pattern versioning**: `version` field in all YAML files; stored per-row in DB
 - **`aidar patterns versions`**: shows loaded vs stored pattern versions, flags stale scans
@@ -28,6 +33,15 @@ Pattern version bumps are noted separately from tool version bumps.
 ---
 
 ## Pattern Changes
+
+### [ai_writing_tropes v3] — 2026-03-09
+New pattern. Structural, tonal, and compositional tropes derived from tropes.fyi. Captures manufactured drama, signposting, listicles in a trenchcoat, and false vulnerability.
+
+### [ai_word_choice_tropes v1] — 2026-03-09
+New pattern. Word-level tropes including "magic adverbs" (quietly, fundamentally) and the "serves as" copula dodge.
+
+### [negative_parallelism v1] — 2026-03-09
+New pattern. Regex-based detector capturing "It's not X — it's Y" and "not because X, but because Y" sentence reframes.
 
 ### [hedging_phrases v2] — 2026-02-26
 Added: `honestly`, `to be honest`, `to be fair`, `to be clear`, `genuinely`,

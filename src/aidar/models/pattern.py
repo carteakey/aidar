@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 DetectionType = Literal["regex", "frequency", "structural", "linguistic"]
-Category = Literal["punctuation", "phrases", "structure", "emoji", "vocabulary"]
+Category = Literal["tropes", "punctuation", "phrases", "structure", "emoji", "vocabulary"]
 Severity = Literal["low", "medium", "high"]
 
 
@@ -27,7 +27,7 @@ class PatternDef:
     def __post_init__(self) -> None:
         if not 0.0 <= self.weight <= 1.0:
             raise ValueError(f"Pattern '{self.id}': weight must be 0.0-1.0, got {self.weight}")
-        valid_categories = {"punctuation", "phrases", "structure", "emoji", "vocabulary"}
+        valid_categories = {"tropes", "punctuation", "phrases", "structure", "emoji", "vocabulary"}
         if self.category not in valid_categories:
             raise ValueError(
                 f"Pattern '{self.id}': invalid category '{self.category}'. "

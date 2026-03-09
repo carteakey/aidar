@@ -46,11 +46,12 @@ def load_weight_config(patterns_dir: Path) -> WeightConfig:
     data = _load_yaml(weights_file)
     weights_data = data.get("weights", {})
     config = WeightConfig(
-        phrases=float(weights_data.get("phrases", 0.35)),
-        punctuation=float(weights_data.get("punctuation", 0.25)),
-        structure=float(weights_data.get("structure", 0.20)),
+        tropes=float(weights_data.get("tropes", 0.40)),
+        phrases=float(weights_data.get("phrases", 0.20)),
+        punctuation=float(weights_data.get("punctuation", 0.15)),
+        structure=float(weights_data.get("structure", 0.10)),
         vocabulary=float(weights_data.get("vocabulary", 0.10)),
-        emoji=float(weights_data.get("emoji", 0.10)),
+        emoji=float(weights_data.get("emoji", 0.05)),
     )
     config.validate()
     return config

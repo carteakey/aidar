@@ -40,6 +40,7 @@ class Analyzer:
             return category_sums.get(cat, 0.0) / total_weight
 
         return ScoreVector(
+            tropes=weighted_mean("tropes"),
             punctuation=weighted_mean("punctuation"),
             phrases=weighted_mean("phrases"),
             structure=weighted_mean("structure"),

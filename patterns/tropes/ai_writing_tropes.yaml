@@ -1,0 +1,331 @@
+id: ai_writing_tropes
+version: 3
+name: AI Writing Tropes
+description: >
+  Structural, tonal, and compositional patterns that are the strongest signals of
+  AI-generated text, sourced from tropes.fyi. These are NOT word-choice patterns
+  (those live in vocabulary/ and phrases/) — they are sentence-level and
+  paragraph-level habits: manufactured drama, rhetorical hand-holding, fake
+  vulnerability, negative parallelism, anaphora, signposted conclusions, and the
+  "despite its challenges" formula. Human writers occasionally use any one of
+  these; AI uses many of them together throughout a single piece.
+category: tropes
+weight: 0.95
+detection_type: frequency
+severity: high
+references:
+  - https://tropes.fyi/directory
+params:
+  terms:
+    # ── Sentence Structure: Negative Parallelism ("It's not X — it's Y") ─────
+    # The single most identified AI writing tell. The "not X — it's Y" reframe
+    # and its causal variant "not because X, but because Y". Before LLMs, people
+    # simply did not write this way at scale.
+    - "—it's"
+    - "—but"
+    - "not because"
+    - "but because"
+    - "it's not about"
+    - "this isn't about"
+    - "it's not that"
+    - "it's not just"
+
+    # ── Sentence Structure: Dramatic Countdown ("Not X. Not Y. Just Z.") ──────
+    # Builds tension by negating two or more things before revealing the point.
+    # Creates a false sense of narrowing down to truth.
+    - "not recklessly"
+    - "not completely"
+    - "not blindly"
+    - "not randomly"
+
+    # ── Sentence Structure: Rhetorical Q&A ("The X? A Y.") ───────────────────
+    # Self-posed questions answered immediately for dramatic effect. The model
+    # asks a question nobody was asking, then answers it.
+    - "the result?"
+    - "the worst part?"
+    - "the scary part?"
+    - "the catch?"
+    - "the problem?"
+    - "the twist?"
+    - "the irony?"
+    - "the kicker?"
+    - "the best part?"
+    - "the real question?"
+    - "the answer?"
+    - "the solution?"
+    - "the difference?"
+    - "the lesson?"
+
+    # ── Sentence Structure: Filler Transitions ────────────────────────────────
+    # Phrases that signal nothing and introduce new points without connecting them.
+    - "it's worth noting"
+    - "it bears mentioning"
+    - "it should be noted that"
+    - "notably,"
+    - "importantly,"
+    - "interestingly,"
+    - "crucially,"
+    - "significantly,"
+
+    # ── Sentence Structure: Superficial Analysis Gerunds ──────────────────────
+    # Tacking on present-participle phrases to inject shallow analysis that says
+    # nothing. Attaches significance to mundane facts.
+    - "contributing to the region's"
+    - "highlighting its importance"
+    - "highlighting the enduring"
+    - "underscoring its role"
+    - "reflecting broader trends"
+    - "shaping its identity"
+    - "underscoring the importance"
+    - "cementing its place"
+    - "solidifying its position"
+    - "reinforcing its status"
+
+    # ── Sentence Structure: False Ranges ──────────────────────────────────────
+    # "from X to Y" where X and Y aren't on any real scale. Used as a fancy
+    # way to list two loosely related things.
+    - "from innovation to"
+    - "from problem-solving to"
+    - "from the singularity"
+    - "from idea to impact"
+    - "from vision to reality"
+    - "from strategy to execution"
+    - "from concept to"
+    - "from theory to practice"
+
+    # ── Sentence Structure: Gerund Fragment Litany ────────────────────────────
+    # After making a claim, AI illustrates it with a stream of verbless gerund
+    # fragments — standalone sentences with no grammatical subject. Humans don't
+    # write first drafts this way. A pure structural tic.
+    - "fixing small bugs"
+    - "writing straightforward"
+    - "implementing well-defined"
+    - "handling edge cases"
+    - "reviewing pull requests"
+
+    # ── Formatting: Em-Dash Addiction ─────────────────────────────────────────
+    # Compulsive overuse of em dashes for dramatic pauses and pivot points.
+    # A human writer might use 2–3 per piece; AI uses 20+. Counts raw "—" chars.
+    - "—"
+
+    # ── Formatting: Unicode Decoration ────────────────────────────────────────
+    # Unicode arrows and special characters that real writers typing in a text
+    # editor don't produce. Counts each occurrence.
+    - "→"
+    - "←"
+    - "⟹"
+    - "⟶"
+
+    # ── Tone: "Here's the Kicker" ─────────────────────────────────────────────
+    # False suspense transitions that promise a revelation but deliver a point
+    # that did not need the buildup. Manufacture drama before unremarkable points.
+    - "here's the kicker"
+    - "here's the thing"
+    - "here's where it gets"
+    - "here's what most people"
+    - "here's the catch"
+    - "here's the problem"
+    - "here's the reality"
+    - "here's the truth"
+    - "here's the part"
+
+    # ── Tone: Patronizing Analogies ("Think of It As...") ────────────────────
+    # The model defaults to teacher mode and assumes the reader needs a metaphor
+    # to understand anything. Often produces analogies less clear than the original.
+    - "think of it as"
+    - "think of it like"
+    - "think of this as"
+    - "it's like asking someone"
+    - "it's like having a"
+    - "it's a bit like"
+    - "it's essentially like"
+
+    # ── Tone: "Imagine a World Where..." ──────────────────────────────────────
+    # Classic AI invitation to futurism. Begins with "Imagine" followed by a list
+    # of wonderful things that will happen if the reader agrees with the premise.
+    - "imagine a world where"
+    - "imagine a future where"
+    - "in that world,"
+    - "imagine if every"
+    - "picture a world"
+    - "picture a future"
+
+    # ── Tone: False Vulnerability ─────────────────────────────────────────────
+    # Simulated self-awareness that reads as performative. Pretends to break the
+    # fourth wall to create a false sense of authenticity. Real vulnerability is
+    # specific and uncomfortable; AI vulnerability is polished and risk-free.
+    - "and yes, i'm openly"
+    - "since we're being honest"
+    - "this is not a rant"
+    - "i'll be honest with you"
+    - "i should be transparent"
+    - "i'll admit,"
+    - "full disclosure:"
+
+    # ── Tone: "The Truth Is Simple" ───────────────────────────────────────────
+    # Asserting that something is obvious or clear instead of actually proving it.
+    # If you have to tell the reader your point is clear, it very likely isn't.
+    - "the reality is simpler"
+    - "history is unambiguous"
+    - "history is clear"
+    - "the metrics are clear"
+    - "the evidence is clear"
+    - "the data is clear"
+    - "the answer is clear"
+    - "the truth is simple"
+    - "it's actually quite simple"
+
+    # ── Tone: Grandiose Stakes Inflation ──────────────────────────────────────
+    # Everything is the most important thing ever. AI inflates the stakes of every
+    # argument to world-historical significance.
+    - "will define the next era"
+    - "will fundamentally transform"
+    - "unlike anything we've seen"
+    - "a new era of"
+    - "the next chapter of"
+    - "redefine what's possible"
+    - "reshape the future"
+    - "the biggest shift"
+    - "a pivotal moment in"
+    - "at a crossroads"
+    - "the dawn of a new"
+    - "will change everything"
+    - "once-in-a-generation"
+
+    # ── Tone: "Let's Break This Down" ─────────────────────────────────────────
+    # The pedagogical voice that assumes the reader needs hand-holding. AI
+    # defaults to a teacher-student dynamic even when writing for expert audiences.
+    - "let's break this down"
+    - "let's unpack"
+    - "let's explore"
+    - "let's dive in"
+    - "let's dive into"
+    - "let's take a closer look"
+    - "let's examine"
+    - "let's walk through"
+    - "let's start with"
+
+    # ── Tone: Vague Attributions ──────────────────────────────────────────────
+    # Attributing claims to unnamed authorities. Invokes "experts", "observers",
+    # "industry reports" without naming anyone. Inflates the quantity of sources.
+    - "experts argue"
+    - "experts suggest"
+    - "industry reports suggest"
+    - "industry experts say"
+    - "observers have cited"
+    - "several publications"
+    - "many experts"
+    - "some experts"
+    - "researchers have found"
+    - "studies show"
+    - "studies suggest"
+    - "many observers"
+
+    # ── Tone: Invented Concept Labels ─────────────────────────────────────────
+    # AI clusters invented compound labels that sound analytical without being
+    # grounded. Appends abstract problem-nouns (paradox, trap, creep, vacuum,
+    # divide) to domain words and uses them as if they're established terms.
+    - "supervision paradox"
+    - "acceleration trap"
+    - "workload creep"
+    - "attention debt"
+    - "trust deficit"
+    - "context collapse"
+    - "intelligence divide"
+    - "complexity spiral"
+    - "abstraction penalty"
+    - "alignment tax"
+    - "attention vacuum"
+    - "knowledge decay"
+
+    # ── Composition: Signposted Conclusion ────────────────────────────────────
+    # Explicitly announcing the conclusion. Competent writing doesn't need to
+    # tell you it's concluding — the reader can feel it.
+    - "in conclusion,"
+    - "to sum up,"
+    - "in summary,"
+    - "to summarize,"
+    - "wrapping up,"
+    - "to wrap up,"
+    - "in closing,"
+
+    # ── Composition: "Despite Its Challenges" Formula ─────────────────────────
+    # Rigid formula where AI acknowledges problems only to immediately dismiss them.
+    # Always follows the same beat: acknowledge → dismiss → optimism.
+    - "despite these challenges"
+    - "despite its challenges"
+    - "despite the challenges"
+    - "despite facing"
+    - "despite its limitations"
+    - "despite all this,"
+    - "despite everything,"
+    - "despite the obstacles"
+
+    # ── Composition: Historical Analogy Stacking ──────────────────────────────
+    # Especially common in technical writing: rapid-fire listing of historical
+    # companies or tech revolutions to build false authority.
+    - "every major technological shift"
+    - "the web, mobile, social"
+    - "just as amazon"
+    - "just as apple"
+    - "just as google"
+    - "just as facebook"
+    - "the printing press"
+    - "the industrial revolution"
+    - "the internet revolution"
+    - "just as the railroad"
+    - "just as electricity"
+
+    # ── Composition: Anaphora Abuse ───────────────────────────────────────────
+    # Repeating the same sentence opening multiple times in quick succession.
+    - "they assume that"
+    - "we assume that"
+    - "she didn't just"
+    - "he didn't just"
+    - "they didn't just"
+    - "it didn't just"
+    - "we didn't just"
+    - "this isn't just"
+
+    # ── Composition: Listicle in a Trench Coat ────────────────────────────────
+    # Numbered or labeled points dressed up as continuous prose. What is
+    # essentially a listicle is wrapped in paragraphs starting "The first..."
+    # "The second..." to disguise the format.
+    - "the first wall"
+    - "the second wall"
+    - "the third wall"
+    - "the second takeaway"
+    - "the third takeaway"
+    - "the first step is"
+    - "the second step is"
+    - "the third step is"
+    - "the first reason"
+    - "the second reason"
+    - "the third reason"
+    - "the first factor"
+    - "the second factor"
+    - "the third factor"
+    - "the first pillar"
+    - "the second pillar"
+    - "the third pillar"
+    - "the first principle"
+    - "the second principle"
+    - "the third principle"
+
+    # ── Composition: Fractal Summaries ────────────────────────────────────────
+    # "What I'm going to tell you; what I'm telling you; what I just told you"
+    # applied at every level. Every subsection, section, and document gets a summary.
+    - "as we've seen"
+    - "as we explored"
+    - "and so we return"
+    - "as we've discussed"
+    - "as we noted earlier"
+    - "in the sections above"
+    - "as covered above"
+    - "as i mentioned earlier"
+    - "as discussed above"
+
+  match_mode: contains
+  per_n_words: 1000
+  threshold_low: 1.0
+  threshold_high: 12.0

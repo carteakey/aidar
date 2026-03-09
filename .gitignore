@@ -26,3 +26,4 @@ aidar.db-wal
 .aidar.db-litestream/
 .*.db-litestream/
 .db-backups/
+inbox
