@@ -25,6 +25,8 @@ HN_EXCLUDED_HOSTS = {
     "google.com", "google.co.uk", "amazon.com",
     "stackoverflow.com",   # Q&A, not prose articles
     "docs.google.com", "drive.google.com",
+    # Encyclopedia / reference — structured data, not prose writing
+    "wikipedia.org", "en.wikipedia.org",
 }
 
 # Map friendly story type names to HN API endpoints

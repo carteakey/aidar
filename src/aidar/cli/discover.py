@@ -183,12 +183,28 @@ def _from_sitemap(base_url: str, timeout: int = 30) -> list[str]:
     return urls
 
 
+_COMMON_FEED_PATHS = [
+    "/feed.xml", "/feed", "/rss.xml", "/rss", "/atom.xml",
+    "/feeds/posts/default", "/feeds/all.atom.xml", "/index.xml",
+]
+
+
 def _from_rss(base_url: str) -> list[str]:
     """Try to find and parse RSS/Atom feeds. find_feed_urls returns article URLs directly."""
     try:
         from trafilatura.feeds import find_feed_urls
         urls = find_feed_urls(base_url)
-        # filter out feed URLs themselves (e.g. /feed.xml)
-        return [u for u in (urls or []) if not u.endswith((".xml", ".rss", ".atom"))]
+        article_urls = [u for u in (urls or []) if not u.endswith((".xml", ".rss", ".atom"))]
+        if article_urls:
+            return article_urls
+        # Some SPAs (e.g. LessWrong) don't expose feed autodiscovery links in HTML.
+        # Try well-known feed paths directly.
+        base = base_url.rstrip("/")
+        for path in _COMMON_FEED_PATHS:
+            direct_urls = find_feed_urls(base + path)
+            article_urls = [u for u in (direct_urls or []) if not u.endswith((".xml", ".rss", ".atom"))]
+            if article_urls:
+                return article_urls
     except Exception:
-        return []
+        pass
+    return []

@@ -10,7 +10,6 @@
 
 # --- Consistently fails discovery ---
 arxiv.org           # PDFs only, no HTML article sitemap
-lesswrong.com       # Custom CMS, no standard sitemap/RSS
 dl.acm.org          # Paywalled academic, no public sitemap
 economist.com       # Paywalled, no public sitemap
 idnfinancials.com   # No discoverable sitemap/RSS
@@ -21,6 +20,20 @@ cnbc.com
 apnews.com
 arstechnica.com     # Timeout consistently; add back if RSS fallback improves
 rd.com
+
+# --- Encyclopedia / reference (structured, not prose writing) ---
+en.wikipedia.org    # High structural scores but not prose writing drift
+wikipedia.org
+
+# --- Paywalled megasites (no public content to scan) ---
+bloomberg.com
+
+# --- Not blogs / not prose content ---
+etsy.com            # Ecommerce
+flydenver.com       # Airport
+getlibation.com     # App landing page
+startherestudio.gumroad.com  # Gumroad store
+actu.epfl.ch        # University news, sitemap timeout
 
 # --- Code / package registries (not prose content) ---
 pypi.org            # Package descriptions are too short/structured
