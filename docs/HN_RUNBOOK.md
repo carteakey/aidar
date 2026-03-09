@@ -75,6 +75,48 @@ Daily at 2:15 AM local time (cron):
 15 2 * * * cd /Users/kchauhan/repos/aidar && /bin/bash scripts/hn-daily-sync.sh >> /tmp/aidar-hn.log 2>&1
 ```
 
+## Domain Management
+
+### Excluding domains from HN discovery
+
+Edit `domain_exclude.txt` — one domain per line, `#` for comments:
+
+```
+# Paywalled, no public content
+bloomberg.com
+# Not prose (ecommerce, airport, etc.)
+etsy.com
+```
+
+Domains in this file are skipped when HN trending/new stories are scanned.
+Domains in `domains.txt` are **never** excluded — they're always scanned.
+
+### Flushing excluded domains from DB
+
+After editing `domain_exclude.txt`, remove their existing scans:
+
+```bash
+bash scripts/db-cleanup-excluded.sh
+```
+
+Shows per-domain scan counts, asks for confirmation, then deletes.
+`pattern_scores` rows are removed automatically via `ON DELETE CASCADE`.
+
+### Deleting a domain via the web UI
+
+Set `AIDAR_ADMIN_KEY` in your environment (and Heroku config vars):
+
+```bash
+# .env
+AIDAR_ADMIN_KEY=yourkey
+
+# Heroku
+heroku config:set AIDAR_ADMIN_KEY=yourkey --app aidar
+```
+
+An **⚙ admin** accordion appears at the bottom of each domain page.
+Enter the key and confirm to wipe all scans for that domain.
+
 ## Manual Pull / Push
 
 Pull latest from R2:
