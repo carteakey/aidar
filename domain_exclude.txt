@@ -1,0 +1,26 @@
+# Domains excluded from HN-discovered scanning.
+# These are added here because they consistently fail discovery, are paywalled,
+# or produce results that aren't useful for AI writing drift analysis.
+#
+# Note: platform sites (github.com, youtube.com, reddit.com etc.) are already
+# excluded at the HN discovery layer — no need to list them here.
+#
+# Format: one domain per line, # for comments.
+# Add domains from your failed-discovery.log after reviewing.
+
+# --- Consistently fails discovery ---
+arxiv.org           # PDFs only, no HTML article sitemap
+lesswrong.com       # Custom CMS, no standard sitemap/RSS
+dl.acm.org          # Paywalled academic, no public sitemap
+economist.com       # Paywalled, no public sitemap
+idnfinancials.com   # No discoverable sitemap/RSS
+
+# --- Sitemap timeout, no RSS fallback (huge media with Cloudflare) ---
+bbc.com
+cnbc.com
+apnews.com
+arstechnica.com     # Timeout consistently; add back if RSS fallback improves
+rd.com
+
+# --- Code / package registries (not prose content) ---
+pypi.org            # Package descriptions are too short/structured

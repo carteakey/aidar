@@ -14,6 +14,7 @@ source scripts/lib/env.sh
 
 export AIDAR_DB="${AIDAR_DB:-aidar.db}"
 DOMAINS_FILE="${DOMAINS_FILE:-domains.txt}"
+FAILED_LOG="${FAILED_LOG:-failed-discovery.log}"
 INTERVAL_MINUTES="${INTERVAL_MINUTES:-1440}"
 LIMIT="${LIMIT:-200}"
 CONCURRENCY="${CONCURRENCY:-10}"
@@ -37,7 +38,8 @@ aidar worker \
   --limit "${LIMIT}" \
   --concurrency "${CONCURRENCY}" \
   --max-cycles "${MAX_CYCLES}" \
-  --db "${AIDAR_DB}"
+  --db "${AIDAR_DB}" \
+  ${FAILED_LOG:+--failed-log "${FAILED_LOG}"}
 
 echo ""
 echo "=== Step 3: checkpoint WAL ==="

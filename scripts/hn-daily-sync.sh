@@ -13,6 +13,8 @@ cd "$(dirname "$0")/.." || exit 1
 source scripts/lib/env.sh
 
 export AIDAR_DB="${AIDAR_DB:-aidar.db}"
+EXCLUDE_FILE="${EXCLUDE_FILE:-domain_exclude.txt}"
+FAILED_LOG="${FAILED_LOG:-failed-discovery.log}"
 
 HN_DOMAINS="${HN_DOMAINS:-25}"
 HN_STORY_LIMIT="${HN_STORY_LIMIT:-250}"
@@ -39,7 +41,9 @@ aidar worker \
   --limit "${DOMAIN_PAGE_LIMIT}" \
   --concurrency "${CONCURRENCY}" \
   --max-cycles "${MAX_CYCLES}" \
-  --db "${AIDAR_DB}"
+  --db "${AIDAR_DB}" \
+  ${EXCLUDE_FILE:+--exclude-domains-file "${EXCLUDE_FILE}"} \
+  ${FAILED_LOG:+--failed-log "${FAILED_LOG}"}
 
 echo ""
 echo "=== Step 3: checkpoint WAL ==="

@@ -6,7 +6,26 @@ from urllib.parse import urlparse
 import httpx
 
 HN_API_BASE = "https://hacker-news.firebaseio.com/v0"
-HN_EXCLUDED_HOSTS = {"news.ycombinator.com"}
+
+# Domains excluded from HN discovery — non-prose-content platforms that will
+# never produce meaningful stylistic data. Prose sites (even paywalled ones)
+# are NOT listed here; add them to your domain_exclude.txt instead.
+HN_EXCLUDED_HOSTS = {
+    "news.ycombinator.com",
+    # Code / VCS hosting — no prose content
+    "github.com", "gitlab.com", "codeberg.org", "bitbucket.org",
+    "sourcehut.org", "sr.ht", "gitea.io",
+    # Video platforms
+    "youtube.com", "youtu.be", "vimeo.com", "twitch.tv",
+    # Social / forums / aggregators
+    "reddit.com", "old.reddit.com", "lobste.rs",
+    "twitter.com", "x.com", "linkedin.com",
+    "mastodon.social", "bsky.app", "threads.net",
+    # Search / commerce / utility
+    "google.com", "google.co.uk", "amazon.com",
+    "stackoverflow.com",   # Q&A, not prose articles
+    "docs.google.com", "drive.google.com",
+}
 
 # Map friendly story type names to HN API endpoints
 _STORY_ENDPOINTS = {

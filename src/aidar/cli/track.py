@@ -131,6 +131,7 @@ def run_track_domain(
     if not urls and source in ("auto", "rss"):
         urls = _from_rss(base_url)
 
+    discovered_count = len(urls)
     if urls:
         console.print(f"[dim]Discovered {len(urls)} URLs.[/dim]")
     else:
@@ -168,9 +169,13 @@ def run_track_domain(
             console.print(f"[dim]Skipping {skipped} already-scanned URLs.[/dim]")
 
     if not urls:
-        console.print("[green]All URLs already up to date.[/green]")
+        if discovered_count == 0:
+            status = "no_discovery"
+        else:
+            console.print("[green]All URLs already up to date.[/green]")
+            status = "all_existing"
         _print_domain_summary(conn, domain_name)
-        return {"discovered": 0, "queued": 0, "saved": 0}
+        return {"status": status, "discovered": discovered_count, "queued": 0, "saved": 0}
 
     urls = urls[:limit]
     console.print(f"[bold]Scanning {len(urls)} URLs (concurrency={concurrency})...[/bold]\n")
@@ -201,7 +206,7 @@ def run_track_domain(
 
     console.print(f"\n[green]Saved {len(results)} results to {db_path}[/green]")
     _print_domain_summary(conn, domain_name)
-    return {"discovered": len(urls), "queued": len(urls), "saved": len(results)}
+    return {"status": "scanned", "discovered": discovered_count, "queued": len(urls), "saved": len(results)}
 
 
 def _print_domain_summary(conn, domain: str) -> None:
