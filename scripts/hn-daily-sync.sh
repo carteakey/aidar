@@ -17,6 +17,8 @@ export AIDAR_DB="${AIDAR_DB:-aidar.db}"
 HN_DOMAINS="${HN_DOMAINS:-25}"
 HN_STORY_LIMIT="${HN_STORY_LIMIT:-250}"
 HN_MIN_STORY_COUNT="${HN_MIN_STORY_COUNT:-2}"
+HN_NEW_DOMAINS="${HN_NEW_DOMAINS:-20}"
+HN_NEW_STORY_LIMIT="${HN_NEW_STORY_LIMIT:-100}"
 DOMAIN_PAGE_LIMIT="${DOMAIN_PAGE_LIMIT:-200}"
 CONCURRENCY="${CONCURRENCY:-10}"
 MAX_CYCLES="${MAX_CYCLES:-1}"  # 1 = one daily run
@@ -32,6 +34,8 @@ aidar worker \
   --hn-domains "${HN_DOMAINS}" \
   --hn-story-limit "${HN_STORY_LIMIT}" \
   --hn-min-story-count "${HN_MIN_STORY_COUNT}" \
+  --hn-new-domains "${HN_NEW_DOMAINS}" \
+  --hn-new-story-limit "${HN_NEW_STORY_LIMIT}" \
   --limit "${DOMAIN_PAGE_LIMIT}" \
   --concurrency "${CONCURRENCY}" \
   --max-cycles "${MAX_CYCLES}" \

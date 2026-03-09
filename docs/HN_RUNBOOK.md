@@ -52,9 +52,11 @@ RESTART_HEROKU=1 HEROKU_APP=aidar bash scripts/hn-daily-sync.sh
 
 All can be set as env vars before running `scripts/hn-daily-sync.sh`:
 
-- `HN_DOMAINS` (default `25`)
-- `HN_STORY_LIMIT` (default `250`)
-- `HN_MIN_STORY_COUNT` (default `2`)
+- `HN_DOMAINS` (default `25`) — top N domains from `/topstories`
+- `HN_STORY_LIMIT` (default `250`) — how many top stories to sample
+- `HN_MIN_STORY_COUNT` (default `2`) — minimum stories per domain before inclusion
+- `HN_NEW_DOMAINS` (default `20`) — top N domains from `/newstories` (set to `0` to disable)
+- `HN_NEW_STORY_LIMIT` (default `100`) — how many new stories to sample
 - `DOMAIN_PAGE_LIMIT` (default `200`)
 - `CONCURRENCY` (default `10`)
 - `MAX_CYCLES` (default `1`)

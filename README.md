@@ -10,6 +10,8 @@ Inspired by: [New accounts on Hacker News ten times more likely to use em-dashes
 
 - ["Wikipedia: Signs of AI writing"](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) — 2023–present
 - ["Tropes - AI Writing Pattern Directory"](https://tropes.fyi/), Ossama Chaib — 2026
+- [LLM writing style: empirical stylometric study](https://arxiv.org/abs/2410.16107) (PNAS 2025) — GPT-4o's second-most-overused word is "tapestry"; present participles alone are a near-sufficient classifier
+- [LLM writing style resources](https://www.refsmmat.com/notebooks/llm-style.html), Alex Reinhart — curated research notebook
 
 ## What it does
 
@@ -51,6 +53,9 @@ aidar worker --domains-file domains.txt --interval-minutes 60 --limit 200 --db a
 # HN trending domains only (refresh every 24h)
 aidar worker --hn-domains 25 --hn-story-limit 250 --interval-minutes 1440 --max-cycles 0 --db aidar.db
 
+# HN top + new stories (broader coverage)
+aidar worker --hn-domains 25 --hn-new-domains 20 --hn-new-story-limit 100 --interval-minutes 1440 --max-cycles 0 --db aidar.db
+
 # Existing domains from file with pull/push sync
 bash scripts/domains-daily-sync.sh
 ```
@@ -61,8 +66,8 @@ Saved operational runbook: [`docs/HN_RUNBOOK.md`](docs/HN_RUNBOOK.md).
 
 | Category    | Weight | Examples                                                                                  |
 |-------------|--------|-------------------------------------------------------------------------------------------|
-| tropes      | 0.40   | negative parallelism, em-dash addiction, bold-first bullets, "here's the kicker", tricolon abuse, signposted conclusions, grandiose stakes inflation |
-| phrases     | 0.20   | "delve into", "it's worth noting", "let's explore", "key takeaway"                       |
+| tropes      | 0.40   | negative parallelism, em-dash addiction, bold-first bullets, AI section headers ("The Takeaway", "Why This Matters"), "here's the kicker", tricolon abuse, signposted conclusions, grandiose stakes inflation |
+| phrases     | 0.20   | second-person address ("Here's how it actually went", "We've all been there"), "delve into", "it's worth noting", "let's explore"                    |
 | punctuation | 0.15   | em dash frequency, ellipsis overuse, semicolon density                                   |
 | structure   | 0.10   | bullet point density, header frequency, sentence burstiness, question avoidance          |
 | vocabulary  | 0.10   | magic adverbs (quietly, fundamentally), "serves as" dodge, tapestry/landscape, formal register |
