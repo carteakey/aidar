@@ -117,3 +117,7 @@ uv run aidar benchmark run tests/fixtures/benchmark/manifest.yaml --split holdou
 
 The report keeps human, fully generated, and materially edited text distinct and includes
 fixed-seed confidence intervals for binary threshold metrics.
+
+Corpus discovery and scan quality rules are documented in
+[`docs/INGESTION.md`](docs/INGESTION.md), including structured failure reasons and the
+non-destructive `aidar audit-corpus` command.

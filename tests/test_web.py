@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import sys
-import types
 
 from aidar.core.fetcher import FetchResult
 from aidar.models.config import AppConfig, WeightConfig
@@ -39,18 +37,14 @@ def test_web_background_scan_passes_raw_html(monkeypatch, tmp_path) -> None:
         )
 
     monkeypatch.setattr("aidar.core.fetcher.fetch_url_async", fake_fetch_url_async)
-    monkeypatch.setitem(
-        sys.modules,
-        "trafilatura.sitemaps",
-        types.SimpleNamespace(sitemap_search=lambda base_url: ["https://example.com/post"]),
-    )
-    monkeypatch.setitem(
-        sys.modules,
-        "trafilatura.feeds",
-        types.SimpleNamespace(find_feed_urls=lambda base_url: []),
+    monkeypatch.setattr(
+        "aidar.core.discovery.discover_urls",
+        lambda base_url: (["https://example.com/post"], "sitemap"),
     )
 
     web_main._scan_status.clear()
+    web_main._scan_summaries.clear()
     asyncio.run(web_main._run_domain_scan("example.com", limit=1))
 
     assert seen["raw_html"] == "<html><strong>Example</strong></html>"
+    assert web_main._scan_summaries["example.com"]["saved"] == 1

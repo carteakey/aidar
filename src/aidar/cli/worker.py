@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -73,6 +74,7 @@ def _print_cycle_summary(
     total_saved: int,
     excluded_count: int,
     started: str,
+    ingestion: Counter[str],
 ) -> None:
     """Print a structured per-cycle outcome table."""
     finished = datetime.now(UTC).isoformat()
@@ -83,6 +85,20 @@ def _print_cycle_summary(
     console.print(
         f"\n[bold green]Cycle {cycle} complete[/bold green] saved={total_saved} finished={finished}"
     )
+    console.print(
+        "  ingestion: "
+        f"discovered={ingestion['discovered']} filtered={ingestion['filtered']} "
+        f"attempted={ingestion['attempted']} saved={ingestion['saved']} "
+        f"failed={ingestion['failed']}"
+    )
+    reason_counts = {
+        key.removeprefix("reason:"): value
+        for key, value in sorted(ingestion.items())
+        if key.startswith("reason:")
+    }
+    if reason_counts:
+        details = ", ".join(f"{key}={value}" for key, value in reason_counts.items())
+        console.print(f"  [dim]reasons: {details}[/dim]")
     console.print(
         f"  [green]✓ scanned ({len(scanned)}):[/green]      {', '.join(scanned[:10]) or '—'}"
     )
@@ -341,6 +357,7 @@ def worker(
             console.print(f"[dim]Cycle {cycle}: scanning {len(cycle_domains)} domains...[/dim]")
 
             total_saved = 0
+            ingestion_totals: Counter[str] = Counter()
             outcomes: dict[str, list[str]] = {"scanned": [], "no_discovery": [], "all_existing": []}
 
             for domain in cycle_domains:
@@ -360,6 +377,13 @@ def worker(
                 status = summary.get("status", "scanned")
                 saved = summary.get("saved", 0)
                 total_saved += saved
+                ingestion_totals["discovered"] += summary["discovered"]
+                ingestion_totals["filtered"] += summary["filtered"]
+                ingestion_totals["attempted"] += summary["attempted"]
+                ingestion_totals["saved"] += summary["saved"]
+                ingestion_totals["failed"] += summary["failed"]
+                for reason, count in summary["reasons"].items():
+                    ingestion_totals[f"reason:{reason}"] += count
 
                 if status == "scanned":
                     outcomes["scanned"].append(f"{domain}({saved})")
@@ -371,7 +395,14 @@ def worker(
                 if sleep_between_domains > 0:
                     time.sleep(sleep_between_domains)
 
-            _print_cycle_summary(cycle, outcomes, total_saved, hn_excluded_this_cycle, started)
+            _print_cycle_summary(
+                cycle,
+                outcomes,
+                total_saved,
+                hn_excluded_this_cycle,
+                started,
+                ingestion_totals,
+            )
 
             if failed_log and outcomes["no_discovery"]:
                 _append_failed_log(failed_log, outcomes["no_discovery"], cycle)

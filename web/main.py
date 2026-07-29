@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import io
 import json
 import os
@@ -9,7 +8,6 @@ from datetime import UTC
 from pathlib import Path
 from urllib.parse import urlparse
 
-import httpx
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -41,6 +39,7 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 # scans are written to an ephemeral SQLite and won't survive a dyno restart.
 # Add DATABASE_URL (Heroku Postgres) to make web-triggered scans persistent.
 _scan_status: dict[str, str] = {}
+_scan_summaries: dict[str, dict] = {}
 _scan_last_completed: dict[str, float] = {}  # domain → unix timestamp
 
 RATE_LIMIT_SECONDS = 60 * 60 * 6  # 6 hours between web-triggered rescans
@@ -76,77 +75,49 @@ def _get_analyzer():
 
 async def _run_domain_scan(domain: str, limit: int = 200) -> None:
     """Background task: discover → filter → scan → store results for a domain."""
-    from aidar.core.fetcher import fetch_url_async
-    from aidar.core.scorer import compute_aggregate
+    from aidar.core.discovery import discover_urls, normalize_domain
+    from aidar.core.ingestion import ScanSummary, filter_prose_urls, scan_urls
     from aidar.db.queries import store_result, url_already_scanned
-
-    def _normalize(d: str) -> str:
-        if not d.startswith(("http://", "https://")):
-            d = "https://" + d
-        p = urlparse(d)
-        return f"{p.scheme}://{p.netloc}"
-
-    def _discover(base_url: str) -> list[str]:
-        try:
-            from trafilatura.sitemaps import sitemap_search
-
-            urls = list(sitemap_search(base_url) or [])
-            if urls:
-                return urls
-        except Exception:
-            pass
-        try:
-            from trafilatura.feeds import find_feed_urls
-
-            urls = find_feed_urls(base_url) or []
-            return [u for u in urls if not u.endswith((".xml", ".rss", ".atom"))]
-        except Exception:
-            return []
 
     _scan_status[domain] = "running"
     try:
-        base_url = _normalize(domain)
-        urls = _discover(base_url)
+        base_url = normalize_domain(domain)
+        urls, _ = discover_urls(base_url)
+        summary = ScanSummary(discovered=len(urls))
         if not urls:
+            _scan_summaries[domain] = summary.as_dict()
             _scan_status[domain] = "error:no_urls"
             return
 
-        # Filter common non-article URL patterns
-        skip = ("/tag/", "/page/", "/author/", "/category/")
-        urls = [u for u in urls if not any(p in u for p in skip)]
+        filtered = filter_prose_urls(urls, base_url=base_url)
+        urls = filtered.kept
+        summary.record_rejections(filtered.rejected)
 
         conn = get_conn()
-        urls = [u for u in urls if not url_already_scanned(conn, u)][:limit]
+        before = len(urls)
+        urls = [u for u in urls if not url_already_scanned(conn, u)]
+        existing = before - len(urls)
+        summary.filtered += existing
+        if existing:
+            summary.reasons["already_scanned"] += existing
+        if len(urls) > limit:
+            deferred = len(urls) - limit
+            summary.filtered += deferred
+            summary.reasons["limit"] += deferred
+            urls = urls[:limit]
         if not urls:
+            _scan_summaries[domain] = summary.as_dict()
             _scan_status[domain] = "done"
             return
 
         analyzer, config = _get_analyzer()
-        semaphore = asyncio.Semaphore(5)
+        outcomes = await scan_urls(urls, analyzer, config, concurrency=5)
+        summary.record_outcomes(outcomes)
+        for outcome in outcomes:
+            if outcome.result is not None:
+                store_result(conn, outcome.result)
 
-        async def _scan_one(url: str, client: httpx.AsyncClient):
-            async with semaphore:
-                try:
-                    fetch = await fetch_url_async(url, client)
-                    sv = analyzer.run(fetch.text, fetch.word_count, raw_html=fetch.raw_html)
-                    return compute_aggregate(
-                        sv,
-                        config,
-                        url=url,
-                        word_count=fetch.word_count,
-                        published_date=fetch.published_date,
-                        title=fetch.title,
-                    )
-                except Exception:
-                    return None
-
-        async with httpx.AsyncClient(timeout=30) as client:
-            results = await asyncio.gather(*[_scan_one(u, client) for u in urls])
-
-        for r in results:
-            if r is not None:
-                store_result(conn, r)
-
+        _scan_summaries[domain] = summary.as_dict()
         _scan_status[domain] = "done"
         _scan_last_completed[domain] = time.time()
     except Exception:
@@ -327,7 +298,11 @@ async def api_domain(domain: str):
 
 @app.get("/api/scan-status/{domain:path}")
 async def api_scan_status(domain: str):
-    return {"domain": domain, "status": _scan_status.get(domain, "unknown")}
+    return {
+        "domain": domain,
+        "status": _scan_status.get(domain, "unknown"),
+        "summary": _scan_summaries.get(domain),
+    }
 
 
 @app.get("/badge/{domain:path}")

@@ -68,6 +68,7 @@ def aidar(ctx: click.Context, patterns_dir: str | None, output: str) -> None:
 # Import subcommands so click can register them
 from aidar.cli import (  # noqa: E402, F401
     analyze,
+    audit,
     benchmark,
     compare,
     discover,

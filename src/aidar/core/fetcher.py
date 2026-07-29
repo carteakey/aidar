@@ -15,13 +15,23 @@ _HEADERS = {
 
 
 class FetchError(Exception):
-    pass
+    def __init__(self, message: str, reason: str = "fetch_error") -> None:
+        super().__init__(message)
+        self.reason = reason
 
 
 class FetchResult:
     """Holds extracted text plus any metadata trafilatura could extract."""
 
-    __slots__ = ("text", "word_count", "title", "published_date", "raw_html")
+    __slots__ = (
+        "text",
+        "word_count",
+        "title",
+        "published_date",
+        "raw_html",
+        "language",
+        "final_url",
+    )
 
     def __init__(
         self,
@@ -30,12 +40,16 @@ class FetchResult:
         title: str | None = None,
         published_date: str | None = None,
         raw_html: str | None = None,
+        language: str | None = None,
+        final_url: str | None = None,
     ):
         self.text = text
         self.word_count = word_count
         self.title = title
         self.published_date = published_date  # ISO date string e.g. "2024-03-15" or None
         self.raw_html = raw_html  # Original HTML source for HTML-level pattern detectors
+        self.language = language
+        self.final_url = final_url
 
 
 def _extract(html: str) -> FetchResult | None:
@@ -51,10 +65,12 @@ def _extract(html: str) -> FetchResult | None:
         extracted_text = str(doc.get("text") or "")
         title = str(doc.get("title") or "") or None
         published_date = str(doc.get("date") or "") or None
+        language = str(doc.get("language") or "") or None
     else:
         extracted_text = doc.text or "" if doc else ""
         title = doc.title or None if doc else None
         published_date = doc.date or None if doc else None
+        language = getattr(doc, "language", None) if doc else None
 
     if len(extracted_text.split()) < 20:
         # Fallback: plain extract without metadata
@@ -69,6 +85,7 @@ def _extract(html: str) -> FetchResult | None:
         title=title,
         published_date=published_date,
         raw_html=html,
+        language=language,
     )
 
 
@@ -78,9 +95,23 @@ def fetch_url(url: str, timeout: int = 30) -> FetchResult:
         response = httpx.get(url, timeout=timeout, follow_redirects=True, headers=_HEADERS)
         response.raise_for_status()
     except httpx.HTTPStatusError as e:
-        raise FetchError(f"HTTP {e.response.status_code} fetching {url}") from e
+        status = e.response.status_code
+        if status == 403:
+            reason = "http_403"
+        elif status == 429:
+            reason = "http_429"
+        elif status >= 500:
+            reason = "http_5xx"
+        else:
+            reason = "http_4xx"
+        raise FetchError(f"HTTP {status} fetching {url}", reason) from e
     except httpx.RequestError as e:
-        raise FetchError(f"Request failed for {url}: {e}") from e
+        reason = "timeout" if isinstance(e, httpx.TimeoutException) else "network_error"
+        raise FetchError(f"Request failed for {url}: {e}", reason) from e
+
+    content_type = response.headers.get("content-type", "").lower()
+    if content_type and not any(kind in content_type for kind in ("html", "text/plain", "xhtml")):
+        raise FetchError(f"Non-text content at {url}: {content_type}", "non_text_content")
 
     result = _extract(response.text)
     if result is None:
@@ -88,13 +119,14 @@ def fetch_url(url: str, timeout: int = 30) -> FetchResult:
             f"Could not extract readable text from {url}. "
             "The page may be JavaScript-rendered, paywalled, or have no article body."
         )
+    result.final_url = str(response.url)
     return result
 
 
 def read_file(path: Path) -> FetchResult:
     """Read a local .txt or .html file."""
     if not path.exists():
-        raise FetchError(f"File not found: {path}")
+        raise FetchError(f"File not found: {path}", "file_not_found")
 
     raw = path.read_text(encoding="utf-8", errors="replace")
 
@@ -105,7 +137,7 @@ def read_file(path: Path) -> FetchResult:
         return FetchResult(text=raw, word_count=count_words(raw), raw_html=raw)
 
     if not raw.strip():
-        raise FetchError(f"File is empty: {path}")
+        raise FetchError(f"File is empty: {path}", "empty_text")
     return FetchResult(text=raw, word_count=count_words(raw))
 
 
@@ -119,11 +151,26 @@ async def fetch_url_async(url: str, client: httpx.AsyncClient) -> FetchResult:
         response = await client.get(url, timeout=30, follow_redirects=True, headers=_HEADERS)
         response.raise_for_status()
     except httpx.HTTPStatusError as e:
-        raise FetchError(f"HTTP {e.response.status_code} fetching {url}") from e
+        status = e.response.status_code
+        if status == 403:
+            reason = "http_403"
+        elif status == 429:
+            reason = "http_429"
+        elif status >= 500:
+            reason = "http_5xx"
+        else:
+            reason = "http_4xx"
+        raise FetchError(f"HTTP {status} fetching {url}", reason) from e
     except httpx.RequestError as e:
-        raise FetchError(f"Request failed for {url}: {e}") from e
+        reason = "timeout" if isinstance(e, httpx.TimeoutException) else "network_error"
+        raise FetchError(f"Request failed for {url}: {e}", reason) from e
+
+    content_type = response.headers.get("content-type", "").lower()
+    if content_type and not any(kind in content_type for kind in ("html", "text/plain", "xhtml")):
+        raise FetchError(f"Non-text content at {url}: {content_type}", "non_text_content")
 
     result = _extract(response.text)
     if result is None:
         raise FetchError(f"No extractable text from {url}")
+    result.final_url = str(response.url)
     return result
