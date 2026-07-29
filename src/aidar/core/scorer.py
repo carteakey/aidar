@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from aidar.models.config import AppConfig, WeightConfig
+from aidar.models.config import AppConfig
 from aidar.models.result import AggregateResult, ScoreVector
 
 
@@ -55,9 +55,7 @@ def compare_model_profile(
     """
     deviations: dict[str, float] = {}
     for pattern_id, expected in model_profile.items():
-        actual_results = [
-            r for r in score_vector.pattern_results if r.pattern_id == pattern_id
-        ]
+        actual_results = [r for r in score_vector.pattern_results if r.pattern_id == pattern_id]
         if actual_results:
             actual = actual_results[0].normalized_score
             deviations[pattern_id] = abs(actual - expected)

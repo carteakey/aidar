@@ -24,7 +24,6 @@ Inspired by: [New accounts on Hacker News ten times more likely to use em-dashes
 
 ```bash
 pip install -e .
-cp .env.example .env  # fill Litestream/R2 credentials
 
 # Analyze a single page
 aidar analyze https://example.com
@@ -87,3 +86,22 @@ Pattern staleness is automatic:
 ## Leaderboard
 
 Results stored with `--save` are queryable via `aidar.db`. The `db/queries.py` module exposes `get_leaderboard()`, `get_domain_stats()`, and `get_pattern_stats()` for building a web dashboard once you've accumulated enough scan data.
+
+## Development
+
+Aidar supports Python 3.11 and 3.12. The committed `uv.lock` is the reproducible
+development environment:
+
+```bash
+uv sync --frozen --extra web --extra dev
+uv run pytest
+uv run ruff check .
+uv run mypy
+```
+
+Copy `.env.example` to `.env` only when running the deployment and Litestream
+scripts; local analysis does not require those credentials.
+
+Model profiles in `patterns/models/` are experimental heuristics, not verified
+model fingerprints. Empirical calibration is planned for the evidence-backed
+v0.5 milestone.

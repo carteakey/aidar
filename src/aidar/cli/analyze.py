@@ -9,7 +9,7 @@ from aidar.core.fetcher import FetchError, FetchResult, count_words, fetch_url, 
 from aidar.core.scorer import compare_model_profile, compute_aggregate
 from aidar.output.formatters import to_json
 from aidar.output.renderer import render_error, render_result
-from aidar.patterns.loader import load_model_profile, PatternLoadError
+from aidar.patterns.loader import PatternLoadError, load_model_profile
 
 
 @aidar.command()
@@ -32,7 +32,8 @@ from aidar.patterns.loader import load_model_profile, PatternLoadError
     help="Minimum word count; warn if below this",
 )
 @click.option(
-    "--verbose", "-v",
+    "--verbose",
+    "-v",
     is_flag=True,
     default=False,
     help="Show per-pattern breakdown",
@@ -69,7 +70,7 @@ def analyze(
             raise click.UsageError("Provide a TARGET (URL or file path) or use --text TEXT.")
     except FetchError as e:
         render_error(str(e))
-        raise SystemExit(1)
+        raise SystemExit(1) from e
 
     if fetch.word_count < min_words:
         click.echo(
@@ -81,8 +82,10 @@ def analyze(
     # Run analysis
     score_vector = analyzer.run(fetch.text, fetch.word_count, raw_html=fetch.raw_html)
     result = compute_aggregate(
-        score_vector, config,
-        url=url, file_path=file_path,
+        score_vector,
+        config,
+        url=url,
+        file_path=file_path,
         word_count=fetch.word_count,
         published_date=fetch.published_date,
         title=fetch.title,

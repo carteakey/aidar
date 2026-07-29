@@ -20,14 +20,12 @@ class HTMLRegexDetector(BaseDetector):
         raw_patterns = pattern.params.get("patterns", [])
         # DOTALL so . matches newlines (needed for multi-line HTML tags like SVG)
         self._compiled = [
-            re.compile(p, re.IGNORECASE | re.UNICODE | re.DOTALL)
-            for p in raw_patterns
+            re.compile(p, re.IGNORECASE | re.UNICODE | re.DOTALL) for p in raw_patterns
         ]
         # Optional plain-text fallback patterns (e.g. markdown ** syntax)
         fallback_patterns = pattern.params.get("text_patterns", [])
         self._text_compiled = [
-            re.compile(p, re.IGNORECASE | re.UNICODE | re.MULTILINE)
-            for p in fallback_patterns
+            re.compile(p, re.IGNORECASE | re.UNICODE | re.MULTILINE) for p in fallback_patterns
         ]
 
     def detect(self, text: str, word_count: int, raw_html: str | None = None) -> PatternResult:

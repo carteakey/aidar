@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 
 
 @dataclass
@@ -48,8 +48,8 @@ class AggregateResult:
     score_vector: ScoreVector
     aggregate_score: int
     label: str
-    scanned_at: datetime = field(default_factory=datetime.utcnow)
-    published_date: str | None = None   # ISO date from article metadata e.g. "2024-03-15"
+    scanned_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    published_date: str | None = None  # ISO date from article metadata e.g. "2024-03-15"
     title: str | None = None
     model_match: dict[str, float] | None = None
 

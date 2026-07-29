@@ -3,7 +3,7 @@
 This is the canonical inventory of all scoring patterns in `aidar`.
 Use it to tune thresholds/weights and track why changes were made.
 
-Last refreshed: 2026-03-08
+Last refreshed: 2026-07-29
 
 ## Tuning Workflow
 
@@ -17,11 +17,12 @@ Last refreshed: 2026-03-08
 
 | Category | Weight |
 |---|---:|
-| phrases | 0.40 |
-| punctuation | 0.20 |
-| structure | 0.15 |
-| vocabulary | 0.15 |
-| emoji | 0.10 |
+| tropes | 0.40 |
+| phrases | 0.20 |
+| punctuation | 0.15 |
+| structure | 0.10 |
+| vocabulary | 0.10 |
+| emoji | 0.05 |
 
 Source: [`patterns/_weights.yaml`](../patterns/_weights.yaml)
 
@@ -39,6 +40,7 @@ Source: [`patterns/_weights.yaml`](../patterns/_weights.yaml)
 | phrases | `llm_reference_artifacts` | regex | 0.95 | 1 | 0.01 | 0.20 | 7 regex patterns | [`patterns/phrases/llm_reference_artifacts.yaml`](../patterns/phrases/llm_reference_artifacts.yaml) |
 | phrases | `llm_tracking_parameters` | regex | 0.90 | 1 | 0.01 | 0.15 | 2 regex patterns | [`patterns/phrases/llm_tracking_parameters.yaml`](../patterns/phrases/llm_tracking_parameters.yaml) |
 | phrases | `notability_media_overattribution` | frequency | 0.76 | 1 | 1.5 | 11.0 | 18 terms | [`patterns/phrases/notability_media_overattribution.yaml`](../patterns/phrases/notability_media_overattribution.yaml) |
+| phrases | `second_person_address` | frequency | 0.70 | 2 | 1.0 | 8.0 | 47 terms | [`patterns/phrases/second_person_address.yaml`](../patterns/phrases/second_person_address.yaml) |
 | phrases | `transition_overload` | frequency | 0.70 | 1 | 3.0 | 20.0 | 23 terms | [`patterns/phrases/transition_overload.yaml`](../patterns/phrases/transition_overload.yaml) |
 | punctuation | `ellipsis_overuse` | regex | 0.40 | 1 | 1.0 | 6.0 | 2 regex patterns | [`patterns/punctuation/ellipsis.yaml`](../patterns/punctuation/ellipsis.yaml) |
 | punctuation | `em_dash_overuse` | regex | 0.85 | 1 | 2.0 | 10.0 | 3 regex patterns | [`patterns/punctuation/em_dash.yaml`](../patterns/punctuation/em_dash.yaml) |
@@ -48,6 +50,13 @@ Source: [`patterns/_weights.yaml`](../patterns/_weights.yaml)
 | structure | `paragraph_uniformity` | structural | 0.50 | 1 | 0.2 | 0.8 | metric: `paragraph_cv_inverted` | [`patterns/structure/paragraph_uniformity.yaml`](../patterns/structure/paragraph_uniformity.yaml) |
 | structure | `question_avoidance` | linguistic | 0.20 | 1 | 0.0 | 0.08 | metric: `question_rate` | [`patterns/structure/question_avoidance.yaml`](../patterns/structure/question_avoidance.yaml) |
 | structure | `sentence_burstiness` | linguistic | 0.65 | 1 | 0.2 | 0.7 | metric: `sentence_burstiness` | [`patterns/structure/sentence_burstiness.yaml`](../patterns/structure/sentence_burstiness.yaml) |
+| tropes | `ai_section_headers` | html_regex | 0.85 | 1 | 0.5 | 4.0 | 6 regex patterns | [`patterns/tropes/ai_section_headers.yaml`](../patterns/tropes/ai_section_headers.yaml) |
+| tropes | `ai_writing_tropes` | frequency | 0.95 | 3 | 1.0 | 12.0 | 209 terms | [`patterns/tropes/ai_writing_tropes.yaml`](../patterns/tropes/ai_writing_tropes.yaml) |
+| tropes | `bold_first_bullets` | html_regex | 0.85 | 2 | 1.0 | 8.0 | 2 regex patterns | [`patterns/tropes/bold_first_bullets.yaml`](../patterns/tropes/bold_first_bullets.yaml) |
+| tropes | `negative_parallelism` | regex | 0.90 | 1 | 0.5 | 5.0 | 3 regex patterns | [`patterns/tropes/negative_parallelism.yaml`](../patterns/tropes/negative_parallelism.yaml) |
+| tropes | `short_punchy_fragments` | regex | 0.80 | 2 | 1.5 | 8.0 | 5 regex patterns | [`patterns/tropes/short_punchy_fragments.yaml`](../patterns/tropes/short_punchy_fragments.yaml) |
+| tropes | `tricolon_abuse` | regex | 0.80 | 1 | 0.5 | 4.0 | 3 regex patterns | [`patterns/tropes/tricolon_abuse.yaml`](../patterns/tropes/tricolon_abuse.yaml) |
+| vocabulary | `ai_word_choice_tropes` | frequency | 0.80 | 2 | 1.0 | 10.0 | 123 terms | [`patterns/vocabulary/ai_word_choice_tropes.yaml`](../patterns/vocabulary/ai_word_choice_tropes.yaml) |
 | vocabulary | `formal_register` | frequency | 0.65 | 1 | 2.0 | 10.0 | 19 terms | [`patterns/vocabulary/formal_register.yaml`](../patterns/vocabulary/formal_register.yaml) |
 | vocabulary | `rare_word_density` | frequency | 0.55 | 1 | 1.5 | 8.0 | 28 terms | [`patterns/vocabulary/rare_word_density.yaml`](../patterns/vocabulary/rare_word_density.yaml) |
 | vocabulary | `type_token_ratio` | linguistic | 0.70 | 1 | 0.15 | 0.55 | metric: `type_token_ratio` | [`patterns/vocabulary/type_token_ratio.yaml`](../patterns/vocabulary/type_token_ratio.yaml) |
@@ -60,4 +69,3 @@ Add one row per pattern change.
 | Date | Pattern ID | Change | Why | Evidence Sample(s) | Expected Impact | Done By |
 |---|---|---|---|---|---|---|
 | 2026-03-08 | `llm_reference_artifacts` | Added pattern (v1) | Capture high-precision LLM artifact tokens | Wikipedia AI-sign indicators | Increase precision on copy/paste AI output | codex |
-

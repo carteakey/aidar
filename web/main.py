@@ -5,7 +5,9 @@ import io
 import json
 import os
 import time
+from datetime import UTC
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
@@ -48,6 +50,12 @@ _analyzer = None
 _analyzer_config = None
 
 
+def _normalize_submitted_domain(value: str) -> str:
+    candidate = value.strip()
+    parsed = urlparse(candidate if "://" in candidate else f"//{candidate}")
+    return parsed.netloc.lower().rstrip(".")
+
+
 def _get_analyzer():
     global _analyzer, _analyzer_config
     if _analyzer is None:
@@ -68,8 +76,6 @@ def _get_analyzer():
 
 async def _run_domain_scan(domain: str, limit: int = 200) -> None:
     """Background task: discover → filter → scan → store results for a domain."""
-    from urllib.parse import urlparse
-
     from aidar.core.fetcher import fetch_url_async
     from aidar.core.scorer import compute_aggregate
     from aidar.db.queries import store_result, url_already_scanned
@@ -83,6 +89,7 @@ async def _run_domain_scan(domain: str, limit: int = 200) -> None:
     def _discover(base_url: str) -> list[str]:
         try:
             from trafilatura.sitemaps import sitemap_search
+
             urls = list(sitemap_search(base_url) or [])
             if urls:
                 return urls
@@ -90,6 +97,7 @@ async def _run_domain_scan(domain: str, limit: int = 200) -> None:
             pass
         try:
             from trafilatura.feeds import find_feed_urls
+
             urls = find_feed_urls(base_url) or []
             return [u for u in urls if not u.endswith((".xml", ".rss", ".atom"))]
         except Exception:
@@ -120,9 +128,10 @@ async def _run_domain_scan(domain: str, limit: int = 200) -> None:
             async with semaphore:
                 try:
                     fetch = await fetch_url_async(url, client)
-                    sv = analyzer.run(fetch.text, fetch.word_count)
+                    sv = analyzer.run(fetch.text, fetch.word_count, raw_html=fetch.raw_html)
                     return compute_aggregate(
-                        sv, config,
+                        sv,
+                        config,
                         url=url,
                         word_count=fetch.word_count,
                         published_date=fetch.published_date,
@@ -154,7 +163,6 @@ async def index(request: Request, q: str = ""):
     leaderboard = get_domain_leaderboard(conn, limit=100)
     stats = get_global_stats(conn)
     # Add percentile to each leaderboard row
-    total = stats.get("total_scans") or 1
     for row in leaderboard:
         below = conn.execute(
             "SELECT COUNT(*) FROM scans WHERE domain != '' GROUP BY domain HAVING AVG(score) <= ?",
@@ -172,13 +180,17 @@ async def submit_site(request: Request, background_tasks: BackgroundTasks):
     from fastapi.responses import RedirectResponse
 
     form = await request.form()
-    domain = str(form.get("domain", "")).strip().lstrip("https://").lstrip("http://").rstrip("/")
+    domain = _normalize_submitted_domain(str(form.get("domain", "")))
     if not domain:
         conn = get_conn()
         return templates.TemplateResponse(
             "index.html",
-            {"request": request, "leaderboard": get_domain_leaderboard(conn, limit=100),
-             "stats": get_global_stats(conn), "submit_error": "Enter a domain."},
+            {
+                "request": request,
+                "leaderboard": get_domain_leaderboard(conn, limit=100),
+                "stats": get_global_stats(conn),
+                "submit_error": "Enter a domain.",
+            },
         )
 
     # Rate limit: already in flight?
@@ -195,9 +207,10 @@ async def submit_site(request: Request, background_tasks: BackgroundTasks):
     stats = get_domain_stats(conn, domain)
     if stats.get("latest"):
         try:
-            from datetime import datetime, timezone
+            from datetime import datetime
+
             latest_dt = datetime.fromisoformat(stats["latest"].replace("Z", "+00:00"))
-            age_s = (datetime.now(timezone.utc) - latest_dt).total_seconds()
+            age_s = (datetime.now(UTC) - latest_dt).total_seconds()
             if age_s < RATE_LIMIT_SECONDS:
                 return RedirectResponse(url=f"/domain/{domain}", status_code=303)
         except Exception:
@@ -337,7 +350,7 @@ async def badge(domain: str):
             color = "#4c9"
 
     left = "aidar"
-    lw = len(left) * 7 + 10   # approx pixel width of left label
+    lw = len(left) * 7 + 10  # approx pixel width of left label
     rw = len(right_text) * 7 + 10
     total = lw + rw
     lx = lw // 2
@@ -361,8 +374,9 @@ async def badge(domain: str):
     <text x="{rx}" y="14">{right_text}</text>
   </g>
 </svg>"""
-    return Response(content=svg, media_type="image/svg+xml",
-                    headers={"Cache-Control": "max-age=3600"})
+    return Response(
+        content=svg, media_type="image/svg+xml", headers={"Cache-Control": "max-age=3600"}
+    )
 
 
 @app.get("/og/{domain:path}")
@@ -387,7 +401,9 @@ async def og_image(domain: str):
 
     # Try to load a decent font; fall back to default
     try:
-        font_big = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 96)
+        font_big = ImageFont.truetype(
+            "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 96
+        )
         font_med = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 36)
         font_sm = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 24)
     except Exception:
@@ -438,5 +454,4 @@ async def og_image(domain: str):
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
     buf.seek(0)
-    return StreamingResponse(buf, media_type="image/png",
-                             headers={"Cache-Control": "max-age=3600"})
+    return StreamingResponse(buf, media_type="image/png", headers={"Cache-Control": "max-age=3600"})

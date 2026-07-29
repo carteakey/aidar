@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Mapping
 from urllib.parse import urlparse
 
 from aidar.models.result import AggregateResult
@@ -49,10 +50,12 @@ def store_result(conn: sqlite3.Connection, result: AggregateResult) -> int:
         ),
     )
     # Always fetch the real ID — lastrowid is unreliable for ON CONFLICT DO UPDATE
-    scan_id = conn.execute(
-        "SELECT id FROM scans WHERE url = ? OR (url IS NULL AND file_path = ?)",
-        (result.url, result.file_path),
-    ).fetchone()[0]
+    scan_id = int(
+        conn.execute(
+            "SELECT id FROM scans WHERE url = ? OR (url IS NULL AND file_path = ?)",
+            (result.url, result.file_path),
+        ).fetchone()[0]
+    )
 
     # Delete old pattern scores for this scan (in case of update)
     conn.execute("DELETE FROM pattern_scores WHERE scan_id = ?", (scan_id,))
@@ -143,7 +146,7 @@ def url_already_scanned(conn: sqlite3.Connection, url: str) -> bool:
 
 def get_stale_urls(
     conn: sqlite3.Connection,
-    current_versions: dict[str, int | tuple[int, str]],
+    current_versions: Mapping[str, int | tuple[int, str]],
     domain: str | None = None,
 ) -> list[str]:
     """
@@ -173,11 +176,14 @@ def get_stale_urls(
         )
         SELECT DISTINCT s.url
         FROM scans s
-        JOIN pattern_scores ps ON ps.scan_id = s.id
-        JOIN current c ON c.pattern_id = ps.pattern_id
+        CROSS JOIN current c
+        LEFT JOIN pattern_scores ps
+          ON ps.scan_id = s.id
+         AND ps.pattern_id = c.pattern_id
         WHERE s.url IS NOT NULL
           AND (
-                ps.pattern_version < c.pattern_version
+                ps.scan_id IS NULL
+                OR ps.pattern_version < c.pattern_version
                 OR (
                     c.pattern_hash != ''
                     AND COALESCE(ps.pattern_hash, '') != c.pattern_hash
@@ -229,7 +235,7 @@ def get_corpus_percentile(conn: sqlite3.Connection, score: int) -> float:
     if not total:
         return 0.0
     below = conn.execute("SELECT COUNT(*) FROM scans WHERE score <= ?", (score,)).fetchone()[0]
-    return round(below / total, 3)
+    return float(round(below / total, 3))
 
 
 def get_domain_scans(
@@ -263,8 +269,12 @@ def get_domain_extremes(
 ) -> tuple[list[dict], list[dict]]:
     """Return (top_n highest scoring, top_n lowest scoring) pages for a domain."""
     base = "SELECT url, word_count, score, label, scanned_at FROM scans WHERE domain = ? AND word_count > 100"
-    highest = [dict(r) for r in conn.execute(f"{base} ORDER BY score DESC LIMIT ?", (domain, n)).fetchall()]
-    lowest = [dict(r) for r in conn.execute(f"{base} ORDER BY score ASC LIMIT ?", (domain, n)).fetchall()]
+    highest = [
+        dict(r) for r in conn.execute(f"{base} ORDER BY score DESC LIMIT ?", (domain, n)).fetchall()
+    ]
+    lowest = [
+        dict(r) for r in conn.execute(f"{base} ORDER BY score ASC LIMIT ?", (domain, n)).fetchall()
+    ]
     return highest, lowest
 
 

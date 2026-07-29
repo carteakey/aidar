@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-import sys
+import multiprocessing
+from typing import Any
 from urllib.parse import urlparse
 
 import click
 
+from aidar import __version__
 from aidar.cli.main import aidar
 from aidar.output.renderer import console
 
@@ -20,7 +22,8 @@ def _normalize_domain(domain: str) -> str:
 @aidar.command()
 @click.argument("domain")
 @click.option(
-    "--output", "-o",
+    "--output",
+    "-o",
     default=None,
     type=click.Path(dir_okay=False, writable=True),
     help="Write URLs to file instead of stdout",
@@ -32,7 +35,8 @@ def _normalize_domain(domain: str) -> str:
     help="Max URLs to return (0 = all)",
 )
 @click.option(
-    "--type", "source_type",
+    "--type",
+    "source_type",
     type=click.Choice(["auto", "sitemap", "rss"]),
     default="auto",
     show_default=True,
@@ -75,8 +79,7 @@ def discover(
 
     if not urls:
         click.echo(
-            f"No URLs found for {base_url}. "
-            "Try --type rss or --type sitemap explicitly.",
+            f"No URLs found for {base_url}. Try --type rss or --type sitemap explicitly.",
             err=True,
         )
         raise SystemExit(1)
@@ -84,7 +87,9 @@ def discover(
     # Filter to article-like URLs
     if filter_ext.strip():
         exts = [e.strip() for e in filter_ext.split(",") if e.strip()]
-        filtered = [u for u in urls if any(u.endswith(e) or "/" in u.split(base_url)[-1] for e in exts)]
+        filtered = [
+            u for u in urls if any(u.endswith(e) or "/" in u.split(base_url)[-1] for e in exts)
+        ]
         # If filtering is too aggressive, fall back to all
         if len(filtered) < 3:
             filtered = urls
@@ -113,9 +118,10 @@ def discover(
             click.echo(url)
 
 
-def _sitemap_worker(base_url: str, queue) -> None:
+def _sitemap_worker(base_url: str, queue: Any) -> None:
     try:
         from trafilatura.sitemaps import sitemap_search
+
         urls = list(sitemap_search(base_url) or [])
         queue.put(urls)
     except Exception:
@@ -130,13 +136,14 @@ def _sitemap_direct(base_url: str) -> list[str]:
     Tries sitemap.xml and sitemap_index.xml.
     """
     import re
+
     import httpx
 
     candidates = [
         f"{base_url.rstrip('/')}/sitemap.xml",
         f"{base_url.rstrip('/')}/sitemap_index.xml",
     ]
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; aidar/0.1)"}
+    headers = {"User-Agent": f"Mozilla/5.0 (compatible; aidar/{__version__})"}
 
     for sitemap_url in candidates:
         try:
@@ -166,8 +173,7 @@ def _from_sitemap(base_url: str, timeout: int = 30) -> list[str]:
     First attempts trafilatura's sitemap_search (handles complex sitemap indexes).
     Falls back to direct XML parsing when the sitemap uses relative <loc> entries.
     """
-    import multiprocessing
-    queue = multiprocessing.Queue()
+    queue: Any = multiprocessing.Queue()
     p = multiprocessing.Process(target=_sitemap_worker, args=(base_url, queue))
     p.start()
     p.join(timeout=timeout)
@@ -184,8 +190,14 @@ def _from_sitemap(base_url: str, timeout: int = 30) -> list[str]:
 
 
 _COMMON_FEED_PATHS = [
-    "/feed.xml", "/feed", "/rss.xml", "/rss", "/atom.xml",
-    "/feeds/posts/default", "/feeds/all.atom.xml", "/index.xml",
+    "/feed.xml",
+    "/feed",
+    "/rss.xml",
+    "/rss",
+    "/atom.xml",
+    "/feeds/posts/default",
+    "/feeds/all.atom.xml",
+    "/index.xml",
 ]
 
 
@@ -193,6 +205,7 @@ def _from_rss(base_url: str) -> list[str]:
     """Try to find and parse RSS/Atom feeds. find_feed_urls returns article URLs directly."""
     try:
         from trafilatura.feeds import find_feed_urls
+
         urls = find_feed_urls(base_url)
         article_urls = [u for u in (urls or []) if not u.endswith((".xml", ".rss", ".atom"))]
         if article_urls:
@@ -202,7 +215,9 @@ def _from_rss(base_url: str) -> list[str]:
         base = base_url.rstrip("/")
         for path in _COMMON_FEED_PATHS:
             direct_urls = find_feed_urls(base + path)
-            article_urls = [u for u in (direct_urls or []) if not u.endswith((".xml", ".rss", ".atom"))]
+            article_urls = [
+                u for u in (direct_urls or []) if not u.endswith((".xml", ".rss", ".atom"))
+            ]
             if article_urls:
                 return article_urls
     except Exception:

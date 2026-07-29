@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import time
 from pathlib import Path
 
 import click
@@ -10,12 +9,10 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 
 from aidar.cli.main import aidar
-from aidar.core.fetcher import FetchError, fetch_url_async, count_words
+from aidar.core.fetcher import FetchError, fetch_url_async
 from aidar.core.scorer import compute_aggregate
 from aidar.output.formatters import to_json_list
 from aidar.output.renderer import render_comparison_table
-
-import trafilatura
 
 console = Console()
 
@@ -92,6 +89,7 @@ def scan(
     if save:
         from aidar.db.database import get_connection
         from aidar.db.queries import url_already_scanned
+
         conn = get_connection(db_path)
         if skip_existing:
             before = len(urls)
@@ -104,29 +102,32 @@ def scan(
         console.print("[green]All URLs already scanned.[/green]")
         return
 
-    console.print(f"[bold]Scanning {len(urls)} URLs (concurrency={concurrency}, min-words={min_words})...[/bold]")
-    results = asyncio.run(
-        _bulk_scan(urls, analyzer, config, concurrency, delay, min_words)
+    console.print(
+        f"[bold]Scanning {len(urls)} URLs (concurrency={concurrency}, min-words={min_words})...[/bold]"
     )
+    results = asyncio.run(_bulk_scan(urls, analyzer, config, concurrency, delay, min_words))
 
     if save and conn:
         from aidar.db.queries import store_result
+
         for result in results:
             store_result(conn, result)
         console.print(f"[green]Saved {len(results)} results to {db_path}[/green]")
 
     if output_format == "json":
         import click as _click
+
         _click.echo(to_json_list(results))
     else:
         from aidar.core.comparator import rank_results
+
         render_comparison_table(rank_results(results))
         console.print(f"\n[bold]Total scanned:[/bold] {len(results)}")
 
 
 def _load_urls(path: str) -> list[str]:
     lines = Path(path).read_text(encoding="utf-8").splitlines()
-    return [l.strip() for l in lines if l.strip() and not l.startswith("#")]
+    return [line.strip() for line in lines if line.strip() and not line.startswith("#")]
 
 
 async def _bulk_scan(urls, analyzer, config, concurrency, delay, min_words=50):
@@ -144,7 +145,9 @@ async def _bulk_scan(urls, analyzer, config, concurrency, delay, min_words=50):
 
         async with httpx.AsyncClient(timeout=30) as client:
             tasks = [
-                _scan_one(url, analyzer, config, client, semaphore, delay, progress, task, min_words)
+                _scan_one(
+                    url, analyzer, config, client, semaphore, delay, progress, task, min_words
+                )
                 for url in urls
             ]
             raw_results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -158,7 +161,9 @@ async def _bulk_scan(urls, analyzer, config, concurrency, delay, min_words=50):
     return results
 
 
-async def _scan_one(url, analyzer, config, client, semaphore, delay, progress, task_id, min_words=50):
+async def _scan_one(
+    url, analyzer, config, client, semaphore, delay, progress, task_id, min_words=50
+):
     async with semaphore:
         try:
             if delay > 0:
@@ -168,7 +173,8 @@ async def _scan_one(url, analyzer, config, client, semaphore, delay, progress, t
                 return None
             score_vector = analyzer.run(fetch.text, fetch.word_count, raw_html=fetch.raw_html)
             result = compute_aggregate(
-                score_vector, config,
+                score_vector,
+                config,
                 url=url,
                 word_count=fetch.word_count,
                 published_date=fetch.published_date,

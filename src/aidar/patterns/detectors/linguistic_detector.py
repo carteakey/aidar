@@ -3,24 +3,24 @@ from __future__ import annotations
 import re
 import statistics
 
-from aidar.models.pattern import PatternDef
 from aidar.models.result import PatternResult
 from aidar.patterns.detectors.base import BaseDetector
 
 try:
     from wordfreq import zipf_frequency
+
     _WORDFREQ_AVAILABLE = True
 except ImportError:
     _WORDFREQ_AVAILABLE = False
 
-_CONTENT_WORD_RE = re.compile(r'\b[a-z]{4,}\b')
+_CONTENT_WORD_RE = re.compile(r"\b[a-z]{4,}\b")
 
 # Simple sentence splitter — handles ., !, ? followed by whitespace + capital
 _SENTENCE_RE = re.compile(r'(?<=[.!?])\s+(?=[A-Z"])')
 # Question detection
-_QUESTION_RE = re.compile(r'\?')
+_QUESTION_RE = re.compile(r"\?")
 # Sentence-ending question
-_QUESTION_SENTENCE_RE = re.compile(r'[^.!?]*\?')
+_QUESTION_SENTENCE_RE = re.compile(r"[^.!?]*\?")
 
 
 def _split_sentences(text: str) -> list[str]:
@@ -68,7 +68,7 @@ class LinguisticDetector(BaseDetector):
 
         # Invert: low CV (uniform) → high AI score
         inverted = max(0.0, 1.0 - cv)
-        return self._make_result(inverted, f"CV={cv:.2f} (burstiness={1-inverted:.2f})")
+        return self._make_result(inverted, f"CV={cv:.2f} (burstiness={1 - inverted:.2f})")
 
     def _type_token_ratio(self, text: str, word_count: int) -> PatternResult:
         """
@@ -84,7 +84,7 @@ class LinguisticDetector(BaseDetector):
         window = 50
         ttrs = []
         for i in range(0, len(words) - window + 1, window // 2):
-            chunk = words[i:i + window]
+            chunk = words[i : i + window]
             ttrs.append(len(set(chunk)) / len(chunk))
 
         avg_ttr = statistics.mean(ttrs) if ttrs else len(set(words)) / len(words)
@@ -110,14 +110,18 @@ class LinguisticDetector(BaseDetector):
         rate = questions / len(sentences)
 
         # Invert: low question rate → high score
-        inverted = max(0.0, 1.0 - (rate / max(self.pattern.params.get("threshold_high", 0.08), 0.001)))
+        inverted = max(
+            0.0, 1.0 - (rate / max(self.pattern.params.get("threshold_high", 0.08), 0.001))
+        )
         inverted = min(1.0, inverted)
 
         # Apply score cap — 0% questions is ambiguous for technical content
         cap = float(self.pattern.params.get("score_cap", 0.70))
         inverted = min(inverted, cap)
 
-        return self._make_result(inverted, f"{questions}/{len(sentences)} sentences are questions ({rate:.1%})")
+        return self._make_result(
+            inverted, f"{questions}/{len(sentences)} sentences are questions ({rate:.1%})"
+        )
 
     def _avg_sentence_length(self, text: str) -> PatternResult:
         """

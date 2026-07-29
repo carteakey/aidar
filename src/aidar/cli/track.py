@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import sqlite3
+from typing import TypedDict
 from urllib.parse import urlparse
 
 import click
@@ -9,7 +11,18 @@ import httpx
 from aidar.cli.discover import _from_rss, _from_sitemap, _normalize_domain
 from aidar.cli.main import aidar
 from aidar.cli.scan import _scan_one
+from aidar.core.analyzer import Analyzer
+from aidar.models.config import AppConfig
+from aidar.models.result import AggregateResult
 from aidar.output.renderer import console
+from aidar.patterns.registry import PatternRegistry
+
+
+class TrackSummary(TypedDict):
+    status: str
+    discovered: int
+    queued: int
+    saved: int
 
 
 @aidar.command()
@@ -98,9 +111,9 @@ def track(
 
 def run_track_domain(
     *,
-    analyzer,
-    config,
-    registry,
+    analyzer: Analyzer,
+    config: AppConfig,
+    registry: PatternRegistry,
     domain: str,
     limit: int = 100,
     concurrency: int = 10,
@@ -109,7 +122,7 @@ def run_track_domain(
     source: str = "auto",
     rescan_stale: bool = True,
     skip_patterns: tuple[str, ...] = (),
-) -> dict[str, int]:
+) -> TrackSummary:
     """
     Shared track execution for CLI and background worker.
     Returns summary counters for observability.
@@ -135,7 +148,9 @@ def run_track_domain(
     if urls:
         console.print(f"[dim]Discovered {len(urls)} URLs.[/dim]")
     else:
-        console.print(f"[yellow]Could not discover any URLs for {domain_name} via {source}.[/yellow]")
+        console.print(
+            f"[yellow]Could not discover any URLs for {domain_name} via {source}.[/yellow]"
+        )
 
     if skip_patterns:
         before = len(urls)
@@ -147,10 +162,7 @@ def run_track_domain(
     if rescan_stale:
         from aidar.db.queries import get_stale_urls
 
-        current_signatures = {
-            p.id: (p.version, p.fingerprint())
-            for p in registry.all_patterns()
-        }
+        current_signatures = {p.id: (p.version, p.fingerprint()) for p in registry.all_patterns()}
         stale = set(get_stale_urls(conn, current_signatures, domain=domain_name))
         if stale:
             console.print(
@@ -180,9 +192,9 @@ def run_track_domain(
     urls = urls[:limit]
     console.print(f"[bold]Scanning {len(urls)} URLs (concurrency={concurrency})...[/bold]\n")
 
-    from rich.progress import Progress, SpinnerColumn, BarColumn, TaskProgressColumn, TextColumn
+    from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 
-    async def run():
+    async def run() -> list[AggregateResult]:
         semaphore = asyncio.Semaphore(concurrency)
         with Progress(
             SpinnerColumn(),
@@ -198,7 +210,7 @@ def run_track_domain(
                     for url in urls
                 ]
                 raw = await asyncio.gather(*tasks, return_exceptions=True)
-        return [r for r in raw if r is not None and not isinstance(r, Exception)]
+        return [item for item in raw if isinstance(item, AggregateResult)]
 
     results = asyncio.run(run())
     for result in results:
@@ -206,11 +218,17 @@ def run_track_domain(
 
     console.print(f"\n[green]Saved {len(results)} results to {db_path}[/green]")
     _print_domain_summary(conn, domain_name)
-    return {"status": "scanned", "discovered": discovered_count, "queued": len(urls), "saved": len(results)}
+    return {
+        "status": "scanned",
+        "discovered": discovered_count,
+        "queued": len(urls),
+        "saved": len(results),
+    }
 
 
-def _print_domain_summary(conn, domain: str) -> None:
+def _print_domain_summary(conn: sqlite3.Connection, domain: str) -> None:
     from aidar.db.queries import get_domain_stats
+
     stats = get_domain_stats(conn, domain)
     if stats.get("scans", 0) == 0:
         return

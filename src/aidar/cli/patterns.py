@@ -47,6 +47,7 @@ def list_patterns(ctx: click.Context, category: str | None) -> None:
 def versions_command(ctx: click.Context, db_path: str) -> None:
     """Show pattern versions stored in DB vs currently loaded — find what needs re-scanning."""
     import os
+
     from aidar.db.database import get_connection
     from aidar.db.queries import get_pattern_version_summary
 
@@ -117,7 +118,7 @@ def show_pattern(ctx: click.Context, pattern_id: str) -> None:
     console.print(f"[bold]Description:[/bold]\n{pattern.description.strip()}")
 
     if pattern.params:
-        console.print(f"\n[bold]Params:[/bold]")
+        console.print("\n[bold]Params:[/bold]")
         for k, v in pattern.params.items():
             if isinstance(v, list) and len(v) > 5:
                 console.print(f"  {k}: [{len(v)} items]")
@@ -125,6 +126,6 @@ def show_pattern(ctx: click.Context, pattern_id: str) -> None:
                 console.print(f"  {k}: {v}")
 
     if pattern.references:
-        console.print(f"\n[bold]References:[/bold]")
+        console.print("\n[bold]References:[/bold]")
         for ref in pattern.references:
             console.print(f"  {ref}")

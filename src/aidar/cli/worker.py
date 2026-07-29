@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import click
@@ -16,7 +16,9 @@ def _load_domains(domains: tuple[str, ...], domains_file: str | None) -> list[st
     loaded = list(domains)
     if domains_file:
         lines = Path(domains_file).read_text(encoding="utf-8").splitlines()
-        loaded.extend(line.strip() for line in lines if line.strip() and not line.strip().startswith("#"))
+        loaded.extend(
+            line.strip() for line in lines if line.strip() and not line.strip().startswith("#")
+        )
 
     # Deduplicate while preserving order.
     deduped: list[str] = []
@@ -58,7 +60,7 @@ def _append_failed_log(path: str, domains: list[str], cycle: int) -> None:
     """Append no-discovery domains to a log file for review."""
     if not domains:
         return
-    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    ts = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     with open(path, "a", encoding="utf-8") as f:
         f.write(f"\n# Cycle {cycle} — {ts} — {len(domains)} domains with no discovery\n")
         for d in sorted(domains):
@@ -73,16 +75,22 @@ def _print_cycle_summary(
     started: str,
 ) -> None:
     """Print a structured per-cycle outcome table."""
-    finished = datetime.now(timezone.utc).isoformat()
+    finished = datetime.now(UTC).isoformat()
     scanned = outcomes.get("scanned", [])
     no_discovery = outcomes.get("no_discovery", [])
     all_existing = outcomes.get("all_existing", [])
 
-    console.print(f"\n[bold green]Cycle {cycle} complete[/bold green] saved={total_saved} finished={finished}")
-    console.print(f"  [green]✓ scanned ({len(scanned)}):[/green]      {', '.join(scanned[:10]) or '—'}")
+    console.print(
+        f"\n[bold green]Cycle {cycle} complete[/bold green] saved={total_saved} finished={finished}"
+    )
+    console.print(
+        f"  [green]✓ scanned ({len(scanned)}):[/green]      {', '.join(scanned[:10]) or '—'}"
+    )
     if len(scanned) > 10:
         console.print(f"                       ...and {len(scanned) - 10} more")
-    console.print(f"  [dim]○ up to date ({len(all_existing)}):[/dim]  {', '.join(all_existing[:8]) or '—'}")
+    console.print(
+        f"  [dim]○ up to date ({len(all_existing)}):[/dim]  {', '.join(all_existing[:8]) or '—'}"
+    )
     if no_discovery:
         console.print(
             f"  [yellow]⚠ no discovery ({len(no_discovery)}):[/yellow] "
@@ -255,7 +263,9 @@ def worker(
 
     exclude_set = _load_exclude_set(exclude_domains_file)
     if exclude_set:
-        console.print(f"[dim]Loaded {len(exclude_set)} excluded domains from {exclude_domains_file}[/dim]")
+        console.print(
+            f"[dim]Loaded {len(exclude_set)} excluded domains from {exclude_domains_file}[/dim]"
+        )
 
     analyzer = ctx.obj["analyzer"]
     config = ctx.obj["config"]
@@ -271,7 +281,7 @@ def worker(
     try:
         while max_cycles == 0 or cycle < max_cycles:
             cycle += 1
-            started = datetime.now(timezone.utc).isoformat()
+            started = datetime.now(UTC).isoformat()
             console.print(f"\n[bold cyan]Cycle {cycle}[/bold cyan] started={started}")
 
             # domain_list entries are always included (manual curation, no exclusion).
@@ -291,11 +301,17 @@ def worker(
                     preview = ", ".join(f"{d}({c})" for d, c in trending[:8])
                     console.print(
                         f"[dim]HN trending: {len(hn_list)} added"
-                        + (f" ({hn_excluded_this_cycle} excluded)" if hn_excluded_this_cycle else "")
+                        + (
+                            f" ({hn_excluded_this_cycle} excluded)"
+                            if hn_excluded_this_cycle
+                            else ""
+                        )
                         + f"[/dim] {preview}"
                     )
                 else:
-                    console.print("[yellow]HN trending lookup returned no domains this cycle.[/yellow]")
+                    console.print(
+                        "[yellow]HN trending lookup returned no domains this cycle.[/yellow]"
+                    )
 
             if hn_new_domains > 0:
                 new_trending = get_hn_trending_domains(
@@ -318,7 +334,9 @@ def worker(
                         + f"[/dim] {preview}"
                     )
                 else:
-                    console.print("[yellow]HN new stories lookup returned no domains this cycle.[/yellow]")
+                    console.print(
+                        "[yellow]HN new stories lookup returned no domains this cycle.[/yellow]"
+                    )
 
             console.print(f"[dim]Cycle {cycle}: scanning {len(cycle_domains)} domains...[/dim]")
 

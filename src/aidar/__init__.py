@@ -1,3 +1,3 @@
-"""aidar — AI text detection via stylistic anomaly scoring."""
+"""Aidar tracks AI-era stylistic signals across web writing."""
 
-__version__ = "0.1.0"
+__version__ = "0.4.0"

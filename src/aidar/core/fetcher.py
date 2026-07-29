@@ -5,9 +5,11 @@ from pathlib import Path
 import httpx
 import trafilatura
 
+from aidar import __version__
+
 _HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (compatible; aidar/0.1; +https://github.com/carteakey/aidar)"
+        f"Mozilla/5.0 (compatible; aidar/{__version__}; +https://github.com/carteakey/aidar)"
     )
 }
 
@@ -18,9 +20,17 @@ class FetchError(Exception):
 
 class FetchResult:
     """Holds extracted text plus any metadata trafilatura could extract."""
+
     __slots__ = ("text", "word_count", "title", "published_date", "raw_html")
 
-    def __init__(self, text: str, word_count: int, title: str | None = None, published_date: str | None = None, raw_html: str | None = None):
+    def __init__(
+        self,
+        text: str,
+        word_count: int,
+        title: str | None = None,
+        published_date: str | None = None,
+        raw_html: str | None = None,
+    ):
         self.text = text
         self.word_count = word_count
         self.title = title
@@ -28,7 +38,7 @@ class FetchResult:
         self.raw_html = raw_html  # Original HTML source for HTML-level pattern detectors
 
 
-def _extract(html: str) -> FetchResult:
+def _extract(html: str) -> FetchResult | None:
     doc = trafilatura.bare_extraction(
         html,
         with_metadata=True,
@@ -37,7 +47,16 @@ def _extract(html: str) -> FetchResult:
         no_fallback=False,
     )
 
-    if not doc or not doc.text or len(doc.text.split()) < 20:
+    if isinstance(doc, dict):
+        extracted_text = str(doc.get("text") or "")
+        title = str(doc.get("title") or "") or None
+        published_date = str(doc.get("date") or "") or None
+    else:
+        extracted_text = doc.text or "" if doc else ""
+        title = doc.title or None if doc else None
+        published_date = doc.date or None if doc else None
+
+    if len(extracted_text.split()) < 20:
         # Fallback: plain extract without metadata
         text = trafilatura.extract(html, include_tables=True, no_fallback=False)
         if not text or len(text.split()) < 20:
@@ -45,10 +64,10 @@ def _extract(html: str) -> FetchResult:
         return FetchResult(text=text, word_count=count_words(text), raw_html=html)
 
     return FetchResult(
-        text=doc.text,
-        word_count=count_words(doc.text),
-        title=doc.title or None,
-        published_date=doc.date or None,
+        text=extracted_text,
+        word_count=count_words(extracted_text),
+        title=title,
+        published_date=published_date,
         raw_html=html,
     )
 

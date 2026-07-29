@@ -63,8 +63,7 @@ def load_model_profile(patterns_dir: Path, model_name: str) -> dict[str, float]:
     if not model_file.exists():
         available = [f.stem for f in (patterns_dir / "models").glob("*.yaml")]
         raise PatternLoadError(
-            f"Model profile '{model_name}' not found. "
-            f"Available: {', '.join(available) or 'none'}"
+            f"Model profile '{model_name}' not found. Available: {', '.join(available) or 'none'}"
         )
     data = _load_yaml(model_file)
     return {k: float(v) for k, v in data.get("profile", {}).items()}
