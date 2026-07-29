@@ -105,3 +105,15 @@ scripts; local analysis does not require those credentials.
 Model profiles in `patterns/models/` are experimental heuristics, not verified
 model fingerprints. Empirical calibration is planned for the evidence-backed
 v0.5 milestone.
+
+## Benchmarking
+
+Versioned labeled manifests and the evaluation workflow live in [`benchmarks/`](benchmarks/README.md).
+Raw corpus text and generated reports remain local and ignored. Run the CI smoke benchmark with:
+
+```bash
+uv run aidar benchmark run tests/fixtures/benchmark/manifest.yaml --split holdout
+```
+
+The report keeps human, fully generated, and materially edited text distinct and includes
+fixed-seed confidence intervals for binary threshold metrics.

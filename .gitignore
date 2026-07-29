@@ -32,4 +32,7 @@ aidar.db-wal
 blog_site_list.csv
 domains-meta.csv
 failed-discovery.log
+.benchmark-data/
+.benchmark-inputs/
+benchmark-reports/
 inbox

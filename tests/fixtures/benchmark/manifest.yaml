@@ -1,0 +1,54 @@
+schema_version: 1
+benchmark:
+  id: harness-smoke
+  version: "1.0.0"
+  description: Artificial texts for exercising the benchmark harness only.
+samples:
+  - id: human-validation
+    label: human
+    split: validation
+    topic: testing
+    language: en
+    publisher: fixture
+    source: {kind: file, path: human.txt}
+    provenance: {evidence: Handwritten test fixture; not research data.}
+  - id: ai-validation
+    label: ai_generated
+    split: validation
+    topic: testing
+    language: en
+    publisher: fixture
+    source: {kind: file, path: ai.txt}
+    provenance:
+      evidence: Artificial test fixture; not research data.
+      model_family: Fixture
+      model: FixtureModel
+  - id: human-holdout
+    label: human
+    split: holdout
+    topic: testing
+    language: en
+    publisher: fixture
+    source: {kind: file, path: human.txt}
+    provenance: {evidence: Handwritten test fixture; not research data.}
+  - id: ai-holdout
+    label: ai_generated
+    split: holdout
+    topic: testing
+    language: en
+    publisher: fixture
+    source: {kind: file, path: ai.txt}
+    provenance:
+      evidence: Artificial test fixture; not research data.
+      model_family: Fixture
+      model: FixtureModel
+  - id: mixed-holdout
+    label: mixed
+    split: holdout
+    topic: testing
+    language: en
+    publisher: fixture
+    source: {kind: file, path: mixed.txt}
+    provenance:
+      evidence: Artificial test fixture; not research data.
+      editing_method: Alternating fixture paragraphs.
