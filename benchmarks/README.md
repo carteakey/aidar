@@ -52,5 +52,13 @@ recall, and false-positive rate use only `human` and `ai_generated`; `mixed` is 
 Segment metrics include topic and language. Publication-year cohorts require at least two samples,
 list smaller groups as excluded, and explicitly avoid causal claims about temporal drift.
 
+For a human-baseline expansion, record a stable source URL, author/date evidence,
+topic, genre, language, and a checksum in the manifest; reserve fixed validation
+and holdout splits before scoring. False-positive audits should include formal
+technical documentation, ESL-authored prose, legal text, and list-heavy pages,
+then report sample counts and confidence intervals by slice. Raw text stays in
+ignored local corpus storage. No model fingerprint or perplexity claim is made
+without measured provenance and a reviewed dependency license.
+
 `tests/fixtures/benchmark/manifest.yaml` is a deliberately artificial smoke corpus for CI. Its
 labels test the harness only and are not evidence about real model behavior.
