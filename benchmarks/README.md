@@ -28,6 +28,17 @@ uv run aidar benchmark validate benchmarks/aidar-core-v1/manifest.yaml
 uv run aidar benchmark run benchmarks/aidar-core-v1/manifest.yaml --split holdout
 ```
 
+Use the validation split to generate non-mutating calibration recommendations:
+
+```bash
+uv run aidar --output json benchmark calibrate benchmarks/aidar-core-v1/manifest.yaml \
+  --output calibration.json
+```
+
+The command records its false-positive budget, category separation, and current
+configuration. It never edits `_weights.yaml`; review recommendations before
+applying a versioned scorer change, and keep holdout results for final reporting.
+
 Use `--refresh` when intentionally refetching web pages. A refreshed URL may produce a new checksum
 because publishers can edit pages; retain the local lock with the report so an evaluation can be
 audited. Use `--no-materialize` to require the existing checksummed corpus.
@@ -38,6 +49,8 @@ The JSON report records scorer thresholds, category weights, a pattern-set finge
 counts, provenance-class score distributions, per-pattern distributions, fixed-seed percentile
 bootstrap intervals, segment metrics, calibration bands, and sample-level results. Precision,
 recall, and false-positive rate use only `human` and `ai_generated`; `mixed` is reported separately.
+Segment metrics include topic and language. Publication-year cohorts require at least two samples,
+list smaller groups as excluded, and explicitly avoid causal claims about temporal drift.
 
 `tests/fixtures/benchmark/manifest.yaml` is a deliberately artificial smoke corpus for CI. Its
 labels test the harness only and are not evidence about real model behavior.

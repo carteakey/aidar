@@ -43,5 +43,33 @@ def test_repository_patterns_load_and_score() -> None:
     assert any(item.pattern_id == "negative_parallelism" for item in vector.pattern_results)
 
 
+def test_evidence_gated_patterns_are_deterministic() -> None:
+    patterns_dir = Path("patterns")
+    registry = PatternRegistry(load_patterns(patterns_dir))
+    analyzer = Analyzer(registry)
+    text = (
+        "Here are three useful points. The report was written by Ada in 2024! "
+        "The report was written by Ada in 2024.\n\n"
+        "This paragraph repeats a phrase.\n\nThis paragraph repeats a phrase."
+    )
+    first = analyzer.run(text, len(text.split()))
+    second = analyzer.run(text, len(text.split()))
+
+    ids = {item.pattern_id for item in first.pattern_results}
+    assert {
+        "list_intro_phrases",
+        "passive_voice_density",
+        "first_person_sparsity",
+        "exclamation_rate",
+        "local_repetition",
+        "named_entity_sparsity",
+        "vocabulary_mismatch",
+        "paragraph_duplication",
+    } <= ids
+    assert [(item.pattern_id, item.raw_value, item.normalized_score) for item in first.pattern_results] == [
+        (item.pattern_id, item.raw_value, item.normalized_score) for item in second.pattern_results
+    ]
+
+
 def test_default_weights_are_valid() -> None:
     WeightConfig().validate()

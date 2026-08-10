@@ -1,0 +1,18 @@
+id: paragraph_duplication
+version: 1
+name: Verbatim Paragraph Duplication
+description: >
+  Detects exact repeated paragraphs after whitespace and punctuation
+  normalization. Semantic repetition requires separate research and is not
+  inferred by this pattern.
+category: structure
+weight: 0.30
+detection_type: linguistic
+severity: medium
+references:
+  - https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+params:
+  metric: paragraph_duplication
+  threshold_low: 2.0
+  threshold_high: 20.0
+

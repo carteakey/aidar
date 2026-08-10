@@ -6,6 +6,7 @@ import random
 import statistics
 from collections import Counter, defaultdict
 from collections.abc import Callable
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -75,12 +76,46 @@ def _distribution(values: list[float]) -> dict[str, float | int]:
 
 
 def _segments(sample: Sample) -> dict[str, str]:
-    result = {"topic": sample.topic, "publisher": sample.publisher}
+    result = {"topic": sample.topic, "language": sample.language, "publisher": sample.publisher}
     result.update(sample.segments)
     model_family = sample.provenance.get("model_family")
     if model_family:
         result["model_family"] = str(model_family)
     return result
+
+
+def _temporal_summary(
+    rows: list[dict[str, Any]], config: AppConfig, seed: int, iterations: int
+) -> dict[str, Any]:
+    """Summarize score cohorts by publication year without causal claims."""
+    cohorts: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        published_at = row.get("published_at")
+        if not published_at:
+            continue
+        try:
+            year = date.fromisoformat(str(published_at)[:10]).year
+        except ValueError:
+            continue
+        cohorts[str(year)].append(row)
+    min_samples = 2
+    included = {
+        year: _group_summary(items, config, seed, iterations)
+        for year, items in sorted(cohorts.items())
+        if len(items) >= min_samples
+    }
+    excluded = {
+        year: len(items)
+        for year, items in sorted(cohorts.items())
+        if len(items) < min_samples
+    }
+    return {
+        "group_by": "publication_year",
+        "min_samples": min_samples,
+        "included": included,
+        "excluded_small_groups": excluded,
+        "note": "Observational cohorts; differences do not establish causality.",
+    }
 
 
 def _calibration_bands(
@@ -144,6 +179,10 @@ def evaluate(
                 "id": sample.id,
                 "label": sample.label,
                 "split": sample.split,
+                "topic": sample.topic,
+                "language": sample.language,
+                "published_at": sample.published_at,
+                "provenance": sample.provenance,
                 "score": result.aggregate_score,
                 "prediction": result.label,
                 "predicted_ai": result.aggregate_score >= config.likely_ai_threshold,
@@ -200,9 +239,108 @@ def evaluate(
         "score_distributions": {label: _distribution(values) for label, values in sorted(by_label.items())},
         "binary_metrics": _binary_metrics(rows, seed, bootstrap_iterations),
         "segment_analysis": segment_analysis,
+        "temporal_analysis": _temporal_summary(rows, config, seed, bootstrap_iterations),
         "calibration_bands": _calibration_bands(rows, config),
         "per_pattern_distributions": per_pattern,
-        "samples": [{key: value for key, value in row.items() if key != "patterns"} for row in rows],
+        "samples": rows,
+    }
+
+
+def recommend_calibration(
+    report: dict[str, Any],
+    analyzer: Analyzer,
+    config: AppConfig,
+    *,
+    false_positive_budget: float = 0.05,
+) -> dict[str, Any]:
+    """Recommend thresholds/weights from a validation-only benchmark report.
+
+    This function never mutates the active config and intentionally consumes a
+    report generated for one split. Callers should pass ``split=validation``;
+    the returned metadata makes that basis explicit.
+    """
+    if not 0.0 <= false_positive_budget <= 1.0:
+        raise ValueError("false_positive_budget must be between 0 and 1")
+    if report.get("benchmark", {}).get("split") != "validation":
+        raise ValueError("calibration recommendations require the validation split")
+    samples = [row for row in report.get("samples", []) if row.get("label") in {"human", "ai_generated"}]
+    human = [int(row["score"]) for row in samples if row["label"] == "human"]
+    ai = [int(row["score"]) for row in samples if row["label"] == "ai_generated"]
+    if not human or not ai:
+        raise ValueError("validation split needs both human and ai_generated samples")
+
+    candidates = sorted({0, 100, *[int(row["score"]) for row in samples]})
+    best: tuple[float, float, int, int] | None = None
+    for threshold in candidates:
+        predicted = [score >= threshold for score in (int(row["score"]) for row in samples)]
+        positives = [row for row, flag in zip(samples, predicted, strict=True) if flag]
+        true_positives = sum(row["label"] == "ai_generated" for row in positives)
+        false_positives = sum(row["label"] == "human" for row in positives)
+        false_negatives = sum(
+            row["label"] == "ai_generated" and not flag
+            for row, flag in zip(samples, predicted, strict=True)
+        )
+        precision = true_positives / max(len(positives), 1)
+        recall = true_positives / max(len(ai), 1)
+        f1 = 2 * precision * recall / max(precision + recall, 1e-9)
+        fpr = false_positives / max(len(human), 1)
+        if fpr <= false_positive_budget:
+            candidate = (f1, -fpr, -threshold, false_negatives)
+            if best is None or candidate > best:
+                best = candidate
+    if best is None:
+        # A budget below the empirical resolution still gets a safe threshold.
+        threshold = max(human) + 1
+        threshold = min(threshold, 100)
+    else:
+        threshold = -int(best[2])
+
+    category_values: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+    pattern_categories = {
+        pattern.id: pattern.category for pattern in analyzer.registry.all_patterns()
+    }
+    for row in samples:
+        for pattern_id, value in row.get("patterns", {}).items():
+            category = pattern_categories.get(pattern_id)
+            if category:
+                category_values[category][row["label"]].append(float(value))
+    separation: dict[str, float] = {}
+    for category, values in category_values.items():
+        human_values = values.get("human", [])
+        ai_values = values.get("ai_generated", [])
+        if human_values and ai_values:
+            separation[category] = round(abs(statistics.fmean(ai_values) - statistics.fmean(human_values)), 4)
+    total = sum(separation.values())
+    recommended_weights = (
+        {category: round(value / total, 4) for category, value in sorted(separation.items())}
+        if total
+        else config.weights.as_dict()
+    )
+    # Keep rounding from making the sum drift; adjust the largest category.
+    if recommended_weights:
+        drift = round(1.0 - sum(recommended_weights.values()), 4)
+        largest = max(recommended_weights, key=lambda category: recommended_weights[category])
+        recommended_weights[largest] = max(
+            0.0, round(recommended_weights[largest] + drift, 4)
+        )
+    return {
+        "basis": {
+            "split": "validation",
+            "false_positive_budget": false_positive_budget,
+            "sample_counts": report.get("sample_counts", {}),
+            "holdout_used": False,
+        },
+        "current": {
+            "likely_human_threshold": config.likely_human_threshold,
+            "likely_ai_threshold": config.likely_ai_threshold,
+            "weights": config.weights.as_dict(),
+        },
+        "recommended": {
+            "likely_human_threshold": min(max(human), threshold - 1),
+            "likely_ai_threshold": threshold,
+            "weights": recommended_weights,
+        },
+        "category_separation": separation,
     }
 
 
@@ -230,5 +368,19 @@ def write_report(report: dict[str, Any], output_dir: Path) -> tuple[Path, Path]:
         interval = metrics[name]
         value = "n/a" if interval is None else f"{interval['value']:.3f} [{interval['low']:.3f}, {interval['high']:.3f}]"
         lines.append(f"- `{name}`: {value}")
+    temporal = report.get("temporal_analysis", {})
+    lines.extend(["", "## Temporal cohorts", ""])
+    lines.append(
+        f"Publication-year cohorts require at least {temporal.get('min_samples', 2)} samples; "
+        "observational differences do not establish causality."
+    )
+    for year, summary in temporal.get("included", {}).items():
+        distribution = summary.get("score_distributions", {})
+        means = ", ".join(
+            f"{label}={values.get('mean', 'n/a')}" for label, values in distribution.items()
+        )
+        lines.append(f"- `{year}`: {means or 'n/a'}")
+    for year, count in temporal.get("excluded_small_groups", {}).items():
+        lines.append(f"- `{year}`: excluded ({count} sample; below minimum)")
     markdown_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return json_path, markdown_path

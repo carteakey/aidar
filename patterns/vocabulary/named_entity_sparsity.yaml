@@ -1,0 +1,18 @@
+id: named_entity_sparsity
+version: 1
+name: Named-Entity Sparsity
+description: >
+  Estimates the share of capitalized names, dates, and years in a document.
+  It is an English-oriented proxy and should not be used alone for scoring.
+category: vocabulary
+weight: 0.20
+detection_type: linguistic
+severity: low
+references:
+  - https://arxiv.org/abs/2410.16107
+params:
+  metric: named_entity_sparsity
+  density_scale: 0.12
+  threshold_low: 0.2
+  threshold_high: 0.8
+

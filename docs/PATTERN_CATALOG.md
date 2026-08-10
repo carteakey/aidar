@@ -3,7 +3,7 @@
 This is the canonical inventory of all scoring patterns in `aidar`.
 Use it to tune thresholds/weights and track why changes were made.
 
-Last refreshed: 2026-07-29
+Last refreshed: 2026-08-10
 
 ## Tuning Workflow
 
@@ -45,12 +45,18 @@ Source: [`patterns/_weights.yaml`](../patterns/_weights.yaml)
 | punctuation | `ellipsis_overuse` | regex | 0.40 | 1 | 1.0 | 6.0 | 2 regex patterns | [`patterns/punctuation/ellipsis.yaml`](../patterns/punctuation/ellipsis.yaml) |
 | punctuation | `em_dash_overuse` | regex | 0.85 | 1 | 2.0 | 10.0 | 3 regex patterns | [`patterns/punctuation/em_dash.yaml`](../patterns/punctuation/em_dash.yaml) |
 | punctuation | `semicolon_overuse` | regex | 0.30 | 1 | 2.0 | 8.0 | 1 regex pattern | [`patterns/punctuation/semicolons.yaml`](../patterns/punctuation/semicolons.yaml) |
+| punctuation | `exclamation_rate` | regex | 0.20 | 1 | 0.5 | 8.0 | 1 regex pattern | [`patterns/punctuation/exclamation_rate.yaml`](../patterns/punctuation/exclamation_rate.yaml) |
 | structure | `bullet_point_density` | structural | 0.75 | 1 | 0.1 | 0.45 | metric: `bullet_density` | [`patterns/structure/bullet_density.yaml`](../patterns/structure/bullet_density.yaml) |
 | structure | `header_frequency` | structural | 0.60 | 1 | 0.003 | 0.015 | metric: `header_ratio` | [`patterns/structure/header_frequency.yaml`](../patterns/structure/header_frequency.yaml) |
+| structure | `local_repetition` | linguistic | 0.25 | 1 | 2.0 | 25.0 | metric: `local_repetition` | [`patterns/structure/local_repetition.yaml`](../patterns/structure/local_repetition.yaml) |
+| structure | `paragraph_duplication` | linguistic | 0.30 | 1 | 2.0 | 20.0 | metric: `paragraph_duplication` | [`patterns/structure/paragraph_duplication.yaml`](../patterns/structure/paragraph_duplication.yaml) |
 | structure | `paragraph_uniformity` | structural | 0.50 | 1 | 0.2 | 0.8 | metric: `paragraph_cv_inverted` | [`patterns/structure/paragraph_uniformity.yaml`](../patterns/structure/paragraph_uniformity.yaml) |
 | structure | `question_avoidance` | linguistic | 0.20 | 1 | 0.0 | 0.08 | metric: `question_rate` | [`patterns/structure/question_avoidance.yaml`](../patterns/structure/question_avoidance.yaml) |
 | structure | `sentence_burstiness` | linguistic | 0.65 | 1 | 0.2 | 0.7 | metric: `sentence_burstiness` | [`patterns/structure/sentence_burstiness.yaml`](../patterns/structure/sentence_burstiness.yaml) |
 | tropes | `ai_section_headers` | html_regex | 0.85 | 1 | 0.5 | 4.0 | 6 regex patterns | [`patterns/tropes/ai_section_headers.yaml`](../patterns/tropes/ai_section_headers.yaml) |
+| tropes | `first_person_sparsity` | linguistic | 0.20 | 1 | 1.0 | 8.0 | metric: `first_person_rate` | [`patterns/tropes/first_person_sparsity.yaml`](../patterns/tropes/first_person_sparsity.yaml) |
+| tropes | `list_intro_phrases` | frequency | 0.35 | 1 | 0.5 | 4.0 | 4 terms | [`patterns/tropes/list_intro_phrases.yaml`](../patterns/tropes/list_intro_phrases.yaml) |
+| tropes | `passive_voice_density` | linguistic | 0.25 | 1 | 2.0 | 15.0 | metric: `passive_voice_rate` | [`patterns/tropes/passive_voice_density.yaml`](../patterns/tropes/passive_voice_density.yaml) |
 | tropes | `ai_writing_tropes` | frequency | 0.95 | 3 | 1.0 | 12.0 | 209 terms | [`patterns/tropes/ai_writing_tropes.yaml`](../patterns/tropes/ai_writing_tropes.yaml) |
 | tropes | `bold_first_bullets` | html_regex | 0.85 | 2 | 1.0 | 8.0 | 2 regex patterns | [`patterns/tropes/bold_first_bullets.yaml`](../patterns/tropes/bold_first_bullets.yaml) |
 | tropes | `negative_parallelism` | regex | 0.90 | 1 | 0.5 | 5.0 | 3 regex patterns | [`patterns/tropes/negative_parallelism.yaml`](../patterns/tropes/negative_parallelism.yaml) |
@@ -58,9 +64,11 @@ Source: [`patterns/_weights.yaml`](../patterns/_weights.yaml)
 | tropes | `tricolon_abuse` | regex | 0.80 | 1 | 0.5 | 4.0 | 3 regex patterns | [`patterns/tropes/tricolon_abuse.yaml`](../patterns/tropes/tricolon_abuse.yaml) |
 | vocabulary | `ai_word_choice_tropes` | frequency | 0.80 | 2 | 1.0 | 10.0 | 123 terms | [`patterns/vocabulary/ai_word_choice_tropes.yaml`](../patterns/vocabulary/ai_word_choice_tropes.yaml) |
 | vocabulary | `formal_register` | frequency | 0.65 | 1 | 2.0 | 10.0 | 19 terms | [`patterns/vocabulary/formal_register.yaml`](../patterns/vocabulary/formal_register.yaml) |
+| vocabulary | `named_entity_sparsity` | linguistic | 0.20 | 1 | 0.2 | 0.8 | metric: `named_entity_sparsity` | [`patterns/vocabulary/named_entity_sparsity.yaml`](../patterns/vocabulary/named_entity_sparsity.yaml) |
 | vocabulary | `rare_word_density` | frequency | 0.55 | 1 | 1.5 | 8.0 | 28 terms | [`patterns/vocabulary/rare_word_density.yaml`](../patterns/vocabulary/rare_word_density.yaml) |
 | vocabulary | `type_token_ratio` | linguistic | 0.70 | 1 | 0.15 | 0.55 | metric: `type_token_ratio` | [`patterns/vocabulary/type_token_ratio.yaml`](../patterns/vocabulary/type_token_ratio.yaml) |
 | vocabulary | `word_freq_variance` | linguistic | 0.80 | 1 | 0.7 | 1.25 | metric: `word_freq_variance` | [`patterns/vocabulary/word_freq_variance.yaml`](../patterns/vocabulary/word_freq_variance.yaml) |
+| vocabulary | `vocabulary_mismatch` | linguistic | 0.20 | 1 | 0.05 | 0.35 | metric: `vocabulary_mismatch` | [`patterns/vocabulary/vocabulary_mismatch.yaml`](../patterns/vocabulary/vocabulary_mismatch.yaml) |
 
 ## Tuning Log
 
