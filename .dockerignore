@@ -1,0 +1,11 @@
+.git
+.venv
+__pycache__
+*.py[cod]
+*.db
+*.db-*
+.benchmark-data
+benchmark-reports
+node_modules
+.DS_Store
+.env

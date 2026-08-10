@@ -1,0 +1,3 @@
+# Copy to deploy/domains.txt before starting the worker.
+# One hostname per line; # comments are ignored.
+example.com

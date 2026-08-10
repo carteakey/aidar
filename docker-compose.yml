@@ -1,0 +1,28 @@
+services:
+  web:
+    build: .
+    command: ["uvicorn", "web.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      AIDAR_DB: /data/aidar.db
+      AIDAR_READ_ONLY: "${AIDAR_READ_ONLY:-false}"
+    ports:
+      - "8000:8000"
+    volumes:
+      - aidar-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    build: .
+    command: ["aidar", "worker", "--domains-file", "/config/domains.txt", "--db", "/data/aidar.db"]
+    volumes:
+      - aidar-data:/data
+      - ./deploy/domains.txt:/config/domains.txt:ro
+    restart: unless-stopped
+
+volumes:
+  aidar-data:
