@@ -26,6 +26,15 @@ Last refreshed: 2026-08-10
 
 Source: [`patterns/_weights.yaml`](../patterns/_weights.yaml)
 
+## Explicitly unsupported signals
+
+Dead-metaphor reuse and one-point dilution are semantic research ideas, not
+active patterns. Aidar does not currently ship an embedding model or claim to
+recognize either signal. Perplexity scoring and per-model fingerprinting are
+also unavailable until a licensed, benchmarked dependency and provenance are
+added. Keeping these ideas out of the active registry prevents silent scoring
+and makes the limitation visible to users.
+
 ## Pattern Inventory
 
 | Category | Pattern ID | Type | Weight | Version | `threshold_low` | `threshold_high` | Signal Set | File |
