@@ -69,9 +69,12 @@ def aidar(ctx: click.Context, patterns_dir: str | None, output: str) -> None:
 from aidar.cli import (  # noqa: E402, F401
     analyze,
     audit,
+    backfill,
     benchmark,
     compare,
+    diff,
     discover,
+    export,
     patterns,
     scan,
     track,

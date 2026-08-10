@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS scans (
     scanned_at      TEXT,
     published_date  TEXT,    -- ISO date extracted from article metadata e.g. "2024-03-15"
     title           TEXT,
+    source_url      TEXT,    -- Original URL when fetched from an archive snapshot
     UNIQUE(url)
 );
 
@@ -68,6 +69,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE scans ADD COLUMN published_date TEXT")
     if "title" not in scan_cols:
         conn.execute("ALTER TABLE scans ADD COLUMN title TEXT")
+    if "source_url" not in scan_cols:
+        conn.execute("ALTER TABLE scans ADD COLUMN source_url TEXT")
 
     # Re-apply additive indexes for existing DBs.
     conn.executescript(

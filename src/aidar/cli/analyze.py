@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 import click
@@ -32,6 +33,12 @@ from aidar.patterns.loader import PatternLoadError, load_model_profile
     help="Minimum word count; warn if below this",
 )
 @click.option(
+    "--published-date",
+    default=None,
+    metavar="YYYY-MM-DD",
+    help="Override a missing publication date (strict ISO calendar date).",
+)
+@click.option(
     "--verbose",
     "-v",
     is_flag=True,
@@ -45,6 +52,7 @@ def analyze(
     text: str | None,
     compare_model: str | None,
     min_words: int,
+    published_date: str | None,
     verbose: bool,
 ) -> None:
     """Analyze a URL, local file, or raw text for AI-generated stylistic signals."""
@@ -52,6 +60,14 @@ def analyze(
     config = ctx.obj["config"]
     output_format = ctx.obj["output"]
     patterns_dir = ctx.obj["patterns_dir"]
+
+    if published_date is not None:
+        try:
+            parsed_date = date.fromisoformat(published_date)
+        except ValueError as exc:
+            raise click.BadParameter("must be a valid ISO date (YYYY-MM-DD)", param_hint="--published-date") from exc
+        if parsed_date.isoformat() != published_date:
+            raise click.BadParameter("must use YYYY-MM-DD with zero padding", param_hint="--published-date")
 
     # Fetch text
     try:
@@ -71,6 +87,11 @@ def analyze(
     except FetchError as e:
         render_error(str(e))
         raise SystemExit(1) from e
+
+    # Publisher metadata always wins.  The explicit value only fills a missing
+    # date so historical imports cannot accidentally rewrite source dates.
+    if published_date is not None and not fetch.published_date:
+        fetch.published_date = published_date
 
     if fetch.word_count < min_words:
         click.echo(
