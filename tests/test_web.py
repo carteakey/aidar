@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from aidar.core.fetcher import FetchResult
 from aidar.models.config import AppConfig, WeightConfig
 from web import main as web_main
@@ -48,3 +50,18 @@ def test_web_background_scan_passes_raw_html(monkeypatch, tmp_path) -> None:
 
     assert seen["raw_html"] == "<html><strong>Example</strong></html>"
     assert web_main._scan_summaries["example.com"]["saved"] == 1
+
+
+def test_read_only_mode_rejects_mutations(monkeypatch) -> None:
+    monkeypatch.setenv("AIDAR_READ_ONLY", "true")
+    assert web_main._read_only() is True
+
+    async def run() -> None:
+        with pytest.raises(web_main.HTTPException) as exc:
+            await web_main.submit_site(object(), object())
+        assert exc.value.status_code == 403
+        with pytest.raises(web_main.HTTPException) as delete_exc:
+            await web_main.admin_delete_domain(object())
+        assert delete_exc.value.status_code == 403
+
+    asyncio.run(run())

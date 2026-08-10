@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ pattern.name }} — aidar.lol{% endblock %}
+
+{% block content %}
+<div class="section-header">
+  <span class="section-title"><a href="/patterns">patterns</a> / {{ pattern.id }}</span>
+  <span class="c-dim" style="font-size:0.75rem">version {{ pattern.version }} · {{ pattern.category }}</span>
+</div>
+
+<div class="domain-hero">
+  <div class="domain-name">{{ pattern.name }}</div>
+  <div class="domain-meta">{{ pattern.description }}</div>
+</div>
+
+<div class="metric-grid">
+  <div class="metric-cell"><div class="metric-value">{{ detail.summary.occurrences if detail.summary else 0 }}</div><div class="metric-label">stored observations</div></div>
+  <div class="metric-cell"><div class="metric-value">{{ "%.2f"|format(detail.summary.avg_score) if detail.summary else "—" }}</div><div class="metric-label">avg normalized score</div></div>
+  <div class="metric-cell"><div class="metric-value">{{ detail.summary.version if detail.summary else pattern.version }}</div><div class="metric-label">stored version</div></div>
+</div>
+
+<div class="section-header"><span class="section-title">thresholds and evidence</span></div>
+<p class="c-dim" style="font-size:0.8rem;margin-bottom:1rem;">
+  Thresholds are configuration heuristics until benchmark calibration publishes evidence.
+  Scores are stylistic index signals and do not establish authorship.
+</p>
+<table class="data-table">
+  <thead><tr><th>page</th><th>raw value</th><th>normalized</th><th>scanned</th></tr></thead>
+  <tbody>
+  {% for row in detail.evidence %}
+  <tr>
+    <td>{% if row.url %}<a href="{{ row.url }}">{{ row.url }}</a>{% else %}{{ row.domain }}{% endif %}</td>
+    <td>{{ "%.3f"|format(row.raw_value or 0) }}</td>
+    <td>{{ "%.3f"|format(row.norm_score or 0) }}</td>
+    <td class="c-dim">{{ row.scanned_at[:10] if row.scanned_at else "—" }}</td>
+  </tr>
+  {% else %}<tr><td colspan="4" class="c-dim">No persisted observations yet.</td></tr>{% endfor %}
+  </tbody>
+</table>
+
+{% if references %}
+<div class="section-header" style="margin-top:2rem"><span class="section-title">references</span></div>
+<ul class="reference-list">{% for ref in references %}<li><a href="{{ ref }}">{{ ref }}</a></li>{% endfor %}</ul>
+{% endif %}
+{% endblock %}

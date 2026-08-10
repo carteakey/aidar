@@ -140,6 +140,25 @@
   {% endfor %}
 </div>
 
+{% if strongest_patterns %}
+<div class="section-header" style="margin-top:2rem">
+  <span class="section-title">strongest observed signals</span>
+  <span class="c-dim" style="font-size:0.75rem">recent persisted pattern evidence</span>
+</div>
+<table class="data-table">
+  <thead><tr><th>pattern</th><th>avg normalized</th><th>version</th></tr></thead>
+  <tbody>
+  {% for pattern in strongest_patterns %}
+  <tr>
+    <td><a href="/patterns/{{ pattern.id }}">{{ pattern.name }}</a></td>
+    <td>{{ "%.3f"|format(pattern.avg_score) }}</td>
+    <td class="c-dim">{{ pattern.version or "—" }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
 {% if top_pages or bottom_pages %}
 <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-top:2rem;">
 

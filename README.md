@@ -57,6 +57,17 @@ aidar worker --hn-domains 25 --hn-new-domains 20 --hn-new-story-limit 100 --inte
 
 # Existing domains from file with pull/push sync
 bash scripts/domains-daily-sync.sh
+
+# Reprocess a stored domain history (dry-run first)
+aidar backfill example.com --dry-run
+aidar backfill example.com --concurrency 5
+
+# Export scored pages and evidence for external analysis
+aidar export --format json --output scans.json
+aidar export --format csv --domain example.com --output example.csv
+
+# Compare deterministic scan-date snapshots
+aidar diff example.com 2026-01-01 2026-02-01
 ```
 
 Saved operational runbook: [`docs/HN_RUNBOOK.md`](docs/HN_RUNBOOK.md).
@@ -121,3 +132,14 @@ fixed-seed confidence intervals for binary threshold metrics.
 Corpus discovery and scan quality rules are documented in
 [`docs/INGESTION.md`](docs/INGESTION.md), including structured failure reasons and the
 non-destructive `aidar audit-corpus` command.
+
+Historical imports can fill a missing publication date with
+`aidar analyze --published-date YYYY-MM-DD`; publisher-provided metadata always
+wins and the override is validated strictly. Exports include a schema version,
+score vectors, pattern evidence, and publication metadata. The web leaderboard
+supports `label`, `page`, and `limit` query parameters, the JSON API returns
+pagination metadata, and `/feed.xml` exposes a bounded feed of recent scans.
+See [`docs/CORPUS_OPERATIONS.md`](docs/CORPUS_OPERATIONS.md) for resumable
+backfill, export, and date-precedence details.
+Container and read-only replica setup is documented in
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
