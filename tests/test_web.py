@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import pytest
 
 from aidar.core.fetcher import FetchResult
 from aidar.models.config import AppConfig, WeightConfig
 from web import main as web_main
+
+
+def test_domain_share_link_uses_public_site_url() -> None:
+    template = Path("web/templates/domain.html").read_text()
+
+    assert "https%3A%2F%2Faidar.lol%2Fdomain%2F" in template
+    assert "airdar.lol" not in template
 
 
 def test_normalize_submitted_domain_keeps_host_intact() -> None:
