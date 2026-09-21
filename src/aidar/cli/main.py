@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 from aidar.core.analyzer import Analyzer
-from aidar.models.config import AppConfig, WeightConfig
+from aidar.models.config import AppConfig
 from aidar.patterns.loader import load_patterns, load_weight_config
 from aidar.patterns.registry import PatternRegistry
 
@@ -25,8 +25,7 @@ def _resolve_patterns_dir(override: str | None) -> Path:
         return _DEFAULT_PATTERNS_DIR
 
     raise click.UsageError(
-        "Could not find the patterns/ directory. "
-        "Use --patterns-dir to specify its location."
+        "Could not find the patterns/ directory. Use --patterns-dir to specify its location."
     )
 
 
@@ -50,10 +49,10 @@ def aidar(ctx: click.Context, patterns_dir: str | None, output: str) -> None:
     ctx.ensure_object(dict)
 
     resolved = _resolve_patterns_dir(patterns_dir)
-    patterns = load_patterns(resolved)
+    loaded_patterns = load_patterns(resolved)
     weights = load_weight_config(resolved)
 
-    registry = PatternRegistry(patterns)
+    registry = PatternRegistry(loaded_patterns)
     analyzer = Analyzer(registry)
 
     ctx.obj["analyzer"] = analyzer
@@ -67,4 +66,17 @@ def aidar(ctx: click.Context, patterns_dir: str | None, output: str) -> None:
 
 
 # Import subcommands so click can register them
-from aidar.cli import analyze, compare, discover, patterns, scan, track, worker  # noqa: E402, F401
+from aidar.cli import (  # noqa: E402, F401
+    analyze,
+    audit,
+    backfill,
+    benchmark,
+    compare,
+    diff,
+    discover,
+    export,
+    patterns,
+    scan,
+    track,
+    worker,
+)

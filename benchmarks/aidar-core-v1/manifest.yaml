@@ -1,0 +1,205 @@
+schema_version: 1
+benchmark:
+  id: aidar-core
+  version: "1.0.0"
+  description: Fixed seed corpus for evaluating Aidar as a stylistic trend index.
+
+samples:
+  - id: gwern-spaced-repetition
+    label: human
+    split: validation
+    topic: learning
+    language: en
+    publisher: gwern.net
+    published_at: "2009-03-11"
+    source:
+      kind: url
+      url: https://gwern.net/spaced-repetition
+    provenance:
+      evidence: Publisher page identifies Gwern Branwen as the author and predates modern generative chat systems.
+    segments:
+      genre: essay
+  - id: gwern-scaling-hypothesis
+    label: human
+    split: holdout
+    topic: artificial-intelligence
+    language: en
+    publisher: gwern.net
+    published_at: "2020-05-28"
+    source:
+      kind: url
+      url: https://gwern.net/scaling-hypothesis
+    provenance:
+      evidence: Publisher page identifies Gwern Branwen as the author and publication predates ChatGPT.
+    segments:
+      genre: essay
+  - id: simon-search-relevance-sqlite
+    label: human
+    split: validation
+    topic: software-development
+    language: en
+    publisher: simonwillison.net
+    published_at: "2019-01-07"
+    source:
+      kind: url
+      url: https://simonwillison.net/2019/Jan/7/exploring-search-relevance-algorithms-sqlite/
+    provenance:
+      evidence: Publisher page identifies Simon Willison as author; publication predates modern generative chat systems.
+    segments:
+      genre: blog
+  - id: simon-sqlite-utils
+    label: human
+    split: holdout
+    topic: software-development
+    language: en
+    publisher: simonwillison.net
+    published_at: "2019-02-25"
+    source:
+      kind: url
+      url: https://simonwillison.net/2019/Feb/25/sqlite-utils/
+    provenance:
+      evidence: Publisher page identifies Simon Willison as author; publication predates modern generative chat systems.
+    segments:
+      genre: blog
+  - id: raid-chatgpt-recipes-00001
+    label: ai_generated
+    split: validation
+    topic: recipes
+    language: en
+    publisher: RAID
+    source:
+      kind: file
+      path: ../../.benchmark-inputs/aidar-core-v1/raid-chatgpt-recipes-00001.txt
+    provenance:
+      evidence: RAID non-adversarial training row selected by domain=recipes, model=chatgpt, ordinal=1 after source order.
+      dataset: RAID
+      dataset_url: https://github.com/liamdugan/raid
+      selector: {model: chatgpt, domain: recipes, attack: none, decoding: greedy, repetition_penalty: "no", ordinal: 1}
+      model_family: GPT-3.5
+      model: ChatGPT
+    segments:
+      genre: instructional
+  - id: raid-gpt4-wikipedia-00001
+    label: ai_generated
+    split: holdout
+    topic: encyclopedia
+    language: en
+    publisher: RAID
+    source:
+      kind: file
+      path: ../../.benchmark-inputs/aidar-core-v1/raid-gpt4-wikipedia-00001.txt
+    provenance:
+      evidence: RAID non-adversarial training row selected by domain=wiki, model=gpt4, ordinal=1 after source order.
+      dataset: RAID
+      dataset_url: https://github.com/liamdugan/raid
+      selector: {model: gpt4, domain: wiki, attack: none, decoding: greedy, repetition_penalty: "no", ordinal: 1}
+      model_family: GPT-4
+      model: GPT-4
+    segments:
+      genre: encyclopedia
+  - id: raid-llama2-reddit-00001
+    label: ai_generated
+    split: validation
+    topic: discussion
+    language: en
+    publisher: RAID
+    source:
+      kind: file
+      path: ../../.benchmark-inputs/aidar-core-v1/raid-llama2-reddit-00001.txt
+    provenance:
+      evidence: RAID non-adversarial training row selected by domain=reddit, model=llama-chat, ordinal=1 after source order.
+      dataset: RAID
+      dataset_url: https://github.com/liamdugan/raid
+      selector: {model: llama-chat, domain: reddit, attack: none, decoding: greedy, repetition_penalty: "no", ordinal: 1}
+      model_family: Llama 2
+      model: Llama 2 70B
+    segments:
+      genre: discussion
+  - id: raid-mistral-arxiv-00001
+    label: ai_generated
+    split: holdout
+    topic: research
+    language: en
+    publisher: RAID
+    source:
+      kind: file
+      path: ../../.benchmark-inputs/aidar-core-v1/raid-mistral-arxiv-00001.txt
+    provenance:
+      evidence: RAID non-adversarial training row selected by domain=abstracts, model=mistral, ordinal=1 after source order.
+      dataset: RAID
+      dataset_url: https://github.com/liamdugan/raid
+      selector: {model: mistral, domain: abstracts, attack: none, decoding: greedy, repetition_penalty: "no", ordinal: 1}
+      model_family: Mistral
+      model: Mistral 7B
+    segments:
+      genre: abstract
+  - id: raid-cohere-books-00001
+    label: ai_generated
+    split: validation
+    topic: books
+    language: en
+    publisher: RAID
+    source:
+      kind: file
+      path: ../../.benchmark-inputs/aidar-core-v1/raid-cohere-books-00001.txt
+    provenance:
+      evidence: RAID non-adversarial training row selected by domain=books, model=cohere, ordinal=1 after source order.
+      dataset: RAID
+      dataset_url: https://github.com/liamdugan/raid
+      selector: {model: cohere, domain: books, attack: none, decoding: greedy, repetition_penalty: "no", ordinal: 1}
+      model_family: Command
+      model: Cohere
+    segments:
+      genre: summary
+  - id: raid-mpt-news-00001
+    label: ai_generated
+    split: holdout
+    topic: news
+    language: en
+    publisher: RAID
+    source:
+      kind: file
+      path: ../../.benchmark-inputs/aidar-core-v1/raid-mpt-news-00001.txt
+    provenance:
+      evidence: RAID non-adversarial training row selected by domain=news, model=mpt, ordinal=1 after source order.
+      dataset: RAID
+      dataset_url: https://github.com/liamdugan/raid
+      selector: {model: mpt, domain: news, attack: none, decoding: greedy, repetition_penalty: "no", ordinal: 1}
+      model_family: MPT
+      model: MPT-30B
+    segments:
+      genre: news
+  - id: mixed-gpt4-human-edit-00001
+    label: mixed
+    split: validation
+    topic: software-development
+    language: en
+    publisher: Aidar controlled edit
+    source:
+      kind: file
+      path: ../../.benchmark-inputs/aidar-core-v1/mixed-gpt4-human-edit-00001.txt
+    provenance:
+      evidence: Human editor revises the named RAID GPT-4 parent while preserving a recorded diff and source lock.
+      editing_method: Material human line edit of raid-gpt4-wikipedia-00001; retain parent and diff beside raw corpus.
+      parent_ids: [raid-gpt4-wikipedia-00001]
+      model_family: GPT-4
+      model: GPT-4
+    segments:
+      genre: edited
+  - id: mixed-llama2-human-edit-00001
+    label: mixed
+    split: holdout
+    topic: discussion
+    language: en
+    publisher: Aidar controlled edit
+    source:
+      kind: file
+      path: ../../.benchmark-inputs/aidar-core-v1/mixed-llama2-human-edit-00001.txt
+    provenance:
+      evidence: Human editor revises the named RAID Llama 2 parent while preserving a recorded diff and source lock.
+      editing_method: Material human line edit of raid-llama2-reddit-00001; retain parent and diff beside raw corpus.
+      parent_ids: [raid-llama2-reddit-00001]
+      model_family: Llama 2
+      model: Llama 2 70B
+    segments:
+      genre: edited

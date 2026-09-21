@@ -21,7 +21,8 @@ from aidar.output.renderer import console, render_comparison_table, render_resul
     show_default=True,
 )
 @click.option(
-    "--verbose", "-v",
+    "--verbose",
+    "-v",
     is_flag=True,
     default=False,
     help="Show per-URL category breakdowns",
@@ -53,8 +54,10 @@ def compare(
 
             score_vector = analyzer.run(fetch.text, fetch.word_count)
             result = compute_aggregate(
-                score_vector, config,
-                url=url, file_path=file_path,
+                score_vector,
+                config,
+                url=url,
+                file_path=file_path,
                 word_count=fetch.word_count,
                 published_date=fetch.published_date,
                 title=fetch.title,

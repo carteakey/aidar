@@ -1,0 +1,17 @@
+id: vocabulary_mismatch
+version: 1
+name: Vocabulary Register Mismatch
+description: >
+  Compares content-token length across document thirds as a transparent proxy
+  for abrupt register shifts. It is not a topic or language classifier.
+category: vocabulary
+weight: 0.20
+detection_type: linguistic
+severity: low
+references:
+  - https://arxiv.org/abs/2410.16107
+params:
+  metric: vocabulary_mismatch
+  threshold_low: 0.05
+  threshold_high: 0.35
+

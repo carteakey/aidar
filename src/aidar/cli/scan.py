@@ -1,21 +1,17 @@
 from __future__ import annotations
 
 import asyncio
-import time
+import json
 from pathlib import Path
 
 import click
-import httpx
 from rich.console import Console
-from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 
 from aidar.cli.main import aidar
-from aidar.core.fetcher import FetchError, fetch_url_async, count_words
-from aidar.core.scorer import compute_aggregate
-from aidar.output.formatters import to_json_list
+from aidar.core.analyzer import Analyzer
+from aidar.core.ingestion import ScanOutcome, ScanSummary, filter_prose_urls, scan_urls
+from aidar.models.config import AppConfig
 from aidar.output.renderer import render_comparison_table
-
-import trafilatura
 
 console = Console()
 
@@ -78,9 +74,14 @@ def scan(
     min_words: int,
 ) -> None:
     """Async bulk scan of URLs from a batch file."""
-    urls = _load_urls(batch_file)
+    loaded_urls = _load_urls(batch_file)
+    filtered = filter_prose_urls(loaded_urls)
+    urls = filtered.kept
+    summary = ScanSummary(discovered=len(loaded_urls))
+    summary.record_rejections(filtered.rejected)
     if not urls:
-        console.print("[yellow]No URLs found in batch file.[/yellow]")
+        console.print("[yellow]No scannable URLs found in batch file.[/yellow]")
+        _render_scan_summary(summary)
         return
 
     analyzer = ctx.obj["analyzer"]
@@ -92,6 +93,7 @@ def scan(
     if save:
         from aidar.db.database import get_connection
         from aidar.db.queries import url_already_scanned
+
         conn = get_connection(db_path)
         if skip_existing:
             before = len(urls)
@@ -99,85 +101,76 @@ def scan(
             skipped = before - len(urls)
             if skipped:
                 console.print(f"[dim]Skipping {skipped} already-scanned URLs.[/dim]")
+                summary.filtered += skipped
+                summary.reasons["already_scanned"] += skipped
 
     if not urls:
         console.print("[green]All URLs already scanned.[/green]")
+        _render_scan_summary(summary)
         return
 
-    console.print(f"[bold]Scanning {len(urls)} URLs (concurrency={concurrency}, min-words={min_words})...[/bold]")
-    results = asyncio.run(
-        _bulk_scan(urls, analyzer, config, concurrency, delay, min_words)
+    console.print(
+        f"[bold]Scanning {len(urls)} URLs (concurrency={concurrency}, min-words={min_words})...[/bold]"
     )
+    outcomes = asyncio.run(_bulk_scan(urls, analyzer, config, concurrency, delay, min_words))
+    summary.record_outcomes(outcomes)
+    results = [outcome.result for outcome in outcomes if outcome.result is not None]
 
     if save and conn:
         from aidar.db.queries import store_result
+
         for result in results:
             store_result(conn, result)
         console.print(f"[green]Saved {len(results)} results to {db_path}[/green]")
 
     if output_format == "json":
-        import click as _click
-        _click.echo(to_json_list(results))
+        click.echo(
+            json.dumps(
+                {
+                    "summary": summary.as_dict(),
+                    "results": [result.as_dict() for result in results],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
     else:
         from aidar.core.comparator import rank_results
+
         render_comparison_table(rank_results(results))
-        console.print(f"\n[bold]Total scanned:[/bold] {len(results)}")
+        _render_scan_summary(summary)
 
 
 def _load_urls(path: str) -> list[str]:
     lines = Path(path).read_text(encoding="utf-8").splitlines()
-    return [l.strip() for l in lines if l.strip() and not l.startswith("#")]
+    return [line.strip() for line in lines if line.strip() and not line.startswith("#")]
 
 
-async def _bulk_scan(urls, analyzer, config, concurrency, delay, min_words=50):
-    semaphore = asyncio.Semaphore(concurrency)
-    results = []
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Scanning...", total=len(urls))
-
-        async with httpx.AsyncClient(timeout=30) as client:
-            tasks = [
-                _scan_one(url, analyzer, config, client, semaphore, delay, progress, task, min_words)
-                for url in urls
-            ]
-            raw_results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    for r in raw_results:
-        if isinstance(r, Exception):
-            continue
-        if r is not None:
-            results.append(r)
-
-    return results
+async def _bulk_scan(
+    urls: list[str],
+    analyzer: Analyzer,
+    config: AppConfig,
+    concurrency: int,
+    delay: float,
+    min_words: int = 50,
+) -> list[ScanOutcome]:
+    return await scan_urls(
+        urls,
+        analyzer,
+        config,
+        concurrency=concurrency,
+        delay=delay,
+        min_words=min_words,
+    )
 
 
-async def _scan_one(url, analyzer, config, client, semaphore, delay, progress, task_id, min_words=50):
-    async with semaphore:
-        try:
-            if delay > 0:
-                await asyncio.sleep(delay)
-            fetch = await fetch_url_async(url, client)
-            if fetch.word_count < min_words:
-                return None
-            score_vector = analyzer.run(fetch.text, fetch.word_count, raw_html=fetch.raw_html)
-            result = compute_aggregate(
-                score_vector, config,
-                url=url,
-                word_count=fetch.word_count,
-                published_date=fetch.published_date,
-                title=fetch.title,
-            )
-            return result
-        except FetchError:
-            return None
-        except Exception:
-            return None
-        finally:
-            progress.advance(task_id)
+def _render_scan_summary(summary: ScanSummary) -> None:
+    data = summary.as_dict()
+    console.print(
+        "\n[bold]Run summary:[/bold] "
+        f"discovered={data['discovered']} filtered={data['filtered']} "
+        f"attempted={data['attempted']} saved={data['saved']} failed={data['failed']}"
+    )
+    if data["reasons"]:
+        reasons = ", ".join(f"{key}={value}" for key, value in data["reasons"].items())
+        console.print(f"[dim]Reasons: {reasons}[/dim]")

@@ -1,0 +1,19 @@
+id: exclamation_rate
+version: 1
+name: Exclamation-Point Rate
+description: >
+  Counts exclamation points per 1,000 words. Usage is genre- and audience-
+  dependent, so the result is shown as a contextual punctuation cue.
+category: punctuation
+weight: 0.20
+detection_type: regex
+severity: low
+references:
+  - https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+params:
+  patterns:
+    - "!"
+  per_n_words: 1000
+  threshold_low: 0.5
+  threshold_high: 8.0
+

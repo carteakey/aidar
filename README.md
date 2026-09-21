@@ -24,7 +24,6 @@ Inspired by: [New accounts on Hacker News ten times more likely to use em-dashes
 
 ```bash
 pip install -e .
-cp .env.example .env  # fill Litestream/R2 credentials
 
 # Analyze a single page
 aidar analyze https://example.com
@@ -58,6 +57,17 @@ aidar worker --hn-domains 25 --hn-new-domains 20 --hn-new-story-limit 100 --inte
 
 # Existing domains from file with pull/push sync
 bash scripts/domains-daily-sync.sh
+
+# Reprocess a stored domain history (dry-run first)
+aidar backfill example.com --dry-run
+aidar backfill example.com --concurrency 5
+
+# Export scored pages and evidence for external analysis
+aidar export --format json --output scans.json
+aidar export --format csv --domain example.com --output example.csv
+
+# Compare deterministic scan-date snapshots
+aidar diff example.com 2026-01-01 2026-02-01
 ```
 
 Saved operational runbook: [`docs/HN_RUNBOOK.md`](docs/HN_RUNBOOK.md).
@@ -87,3 +97,49 @@ Pattern staleness is automatic:
 ## Leaderboard
 
 Results stored with `--save` are queryable via `aidar.db`. The `db/queries.py` module exposes `get_leaderboard()`, `get_domain_stats()`, and `get_pattern_stats()` for building a web dashboard once you've accumulated enough scan data.
+
+## Development
+
+Aidar supports Python 3.11 and 3.12. The committed `uv.lock` is the reproducible
+development environment:
+
+```bash
+uv sync --frozen --extra web --extra dev
+uv run pytest
+uv run ruff check .
+uv run mypy
+```
+
+Copy `.env.example` to `.env` only when running the deployment and Litestream
+scripts; local analysis does not require those credentials.
+
+Model profiles in `patterns/models/` are experimental heuristics, not verified
+model fingerprints. Empirical calibration is planned for the evidence-backed
+v0.5 milestone.
+
+## Benchmarking
+
+Versioned labeled manifests and the evaluation workflow live in [`benchmarks/`](benchmarks/README.md).
+Raw corpus text and generated reports remain local and ignored. Run the CI smoke benchmark with:
+
+```bash
+uv run aidar benchmark run tests/fixtures/benchmark/manifest.yaml --split holdout
+```
+
+The report keeps human, fully generated, and materially edited text distinct and includes
+fixed-seed confidence intervals for binary threshold metrics.
+
+Corpus discovery and scan quality rules are documented in
+[`docs/INGESTION.md`](docs/INGESTION.md), including structured failure reasons and the
+non-destructive `aidar audit-corpus` command.
+
+Historical imports can fill a missing publication date with
+`aidar analyze --published-date YYYY-MM-DD`; publisher-provided metadata always
+wins and the override is validated strictly. Exports include a schema version,
+score vectors, pattern evidence, and publication metadata. The web leaderboard
+supports `label`, `page`, and `limit` query parameters, the JSON API returns
+pagination metadata, and `/feed.xml` exposes a bounded feed of recent scans.
+See [`docs/CORPUS_OPERATIONS.md`](docs/CORPUS_OPERATIONS.md) for resumable
+backfill, export, and date-precedence details.
+Container and read-only replica setup is documented in
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).

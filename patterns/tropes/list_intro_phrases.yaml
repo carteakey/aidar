@@ -1,0 +1,24 @@
+id: list_intro_phrases
+version: 1
+name: List-Intro Phrases
+description: >
+  Formulaic introductions such as "Here are five ways" or "The following
+  points" announce a list before giving the reader any context. This bounded
+  phrase signal is an index cue, not an authorship test.
+category: tropes
+weight: 0.35
+detection_type: frequency
+severity: low
+references:
+  - https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+params:
+  terms:
+    - "here are"
+    - "the following"
+    - "in this article, we"
+    - "in this guide, we"
+  match_mode: contains
+  per_n_words: 1000
+  threshold_low: 0.5
+  threshold_high: 4.0
+

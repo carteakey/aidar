@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import asyncio
 import io
 import json
 import os
 import time
+from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import urlparse
+from xml.etree import ElementTree
 
-import httpx
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,6 +16,7 @@ from fastapi.templating import Jinja2Templates
 
 from aidar.db.database import get_connection
 from aidar.db.queries import (
+    count_domain_leaderboard,
     delete_domain,
     get_corpus_percentile,
     get_domain_extremes,
@@ -23,7 +25,9 @@ from aidar.db.queries import (
     get_domain_stats,
     get_domain_trend,
     get_global_stats,
+    get_pattern_detail,
     get_pattern_stats,
+    get_recent_scans,
 )
 
 DB_PATH = os.environ.get("AIDAR_DB", "aidar.db")
@@ -39,6 +43,7 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 # scans are written to an ephemeral SQLite and won't survive a dyno restart.
 # Add DATABASE_URL (Heroku Postgres) to make web-triggered scans persistent.
 _scan_status: dict[str, str] = {}
+_scan_summaries: dict[str, dict] = {}
 _scan_last_completed: dict[str, float] = {}  # domain → unix timestamp
 
 RATE_LIMIT_SECONDS = 60 * 60 * 6  # 6 hours between web-triggered rescans
@@ -46,6 +51,12 @@ RATE_LIMIT_SECONDS = 60 * 60 * 6  # 6 hours between web-triggered rescans
 # Lazy-loaded analyzer singleton (loaded once at first scan request)
 _analyzer = None
 _analyzer_config = None
+
+
+def _normalize_submitted_domain(value: str) -> str:
+    candidate = value.strip()
+    parsed = urlparse(candidate if "://" in candidate else f"//{candidate}")
+    return parsed.netloc.lower().rstrip(".")
 
 
 def _get_analyzer():
@@ -68,76 +79,49 @@ def _get_analyzer():
 
 async def _run_domain_scan(domain: str, limit: int = 200) -> None:
     """Background task: discover → filter → scan → store results for a domain."""
-    from urllib.parse import urlparse
-
-    from aidar.core.fetcher import fetch_url_async
-    from aidar.core.scorer import compute_aggregate
+    from aidar.core.discovery import discover_urls, normalize_domain
+    from aidar.core.ingestion import ScanSummary, filter_prose_urls, scan_urls
     from aidar.db.queries import store_result, url_already_scanned
-
-    def _normalize(d: str) -> str:
-        if not d.startswith(("http://", "https://")):
-            d = "https://" + d
-        p = urlparse(d)
-        return f"{p.scheme}://{p.netloc}"
-
-    def _discover(base_url: str) -> list[str]:
-        try:
-            from trafilatura.sitemaps import sitemap_search
-            urls = list(sitemap_search(base_url) or [])
-            if urls:
-                return urls
-        except Exception:
-            pass
-        try:
-            from trafilatura.feeds import find_feed_urls
-            urls = find_feed_urls(base_url) or []
-            return [u for u in urls if not u.endswith((".xml", ".rss", ".atom"))]
-        except Exception:
-            return []
 
     _scan_status[domain] = "running"
     try:
-        base_url = _normalize(domain)
-        urls = _discover(base_url)
+        base_url = normalize_domain(domain)
+        urls, _ = discover_urls(base_url)
+        summary = ScanSummary(discovered=len(urls))
         if not urls:
+            _scan_summaries[domain] = summary.as_dict()
             _scan_status[domain] = "error:no_urls"
             return
 
-        # Filter common non-article URL patterns
-        skip = ("/tag/", "/page/", "/author/", "/category/")
-        urls = [u for u in urls if not any(p in u for p in skip)]
+        filtered = filter_prose_urls(urls, base_url=base_url)
+        urls = filtered.kept
+        summary.record_rejections(filtered.rejected)
 
         conn = get_conn()
-        urls = [u for u in urls if not url_already_scanned(conn, u)][:limit]
+        before = len(urls)
+        urls = [u for u in urls if not url_already_scanned(conn, u)]
+        existing = before - len(urls)
+        summary.filtered += existing
+        if existing:
+            summary.reasons["already_scanned"] += existing
+        if len(urls) > limit:
+            deferred = len(urls) - limit
+            summary.filtered += deferred
+            summary.reasons["limit"] += deferred
+            urls = urls[:limit]
         if not urls:
+            _scan_summaries[domain] = summary.as_dict()
             _scan_status[domain] = "done"
             return
 
         analyzer, config = _get_analyzer()
-        semaphore = asyncio.Semaphore(5)
+        outcomes = await scan_urls(urls, analyzer, config, concurrency=5)
+        summary.record_outcomes(outcomes)
+        for outcome in outcomes:
+            if outcome.result is not None:
+                store_result(conn, outcome.result)
 
-        async def _scan_one(url: str, client: httpx.AsyncClient):
-            async with semaphore:
-                try:
-                    fetch = await fetch_url_async(url, client)
-                    sv = analyzer.run(fetch.text, fetch.word_count)
-                    return compute_aggregate(
-                        sv, config,
-                        url=url,
-                        word_count=fetch.word_count,
-                        published_date=fetch.published_date,
-                        title=fetch.title,
-                    )
-                except Exception:
-                    return None
-
-        async with httpx.AsyncClient(timeout=30) as client:
-            results = await asyncio.gather(*[_scan_one(u, client) for u in urls])
-
-        for r in results:
-            if r is not None:
-                store_result(conn, r)
-
+        _scan_summaries[domain] = summary.as_dict()
         _scan_status[domain] = "done"
         _scan_last_completed[domain] = time.time()
     except Exception:
@@ -148,22 +132,50 @@ def get_conn():
     return get_connection(DB_PATH)
 
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request, q: str = ""):
+def _read_only() -> bool:
+    """Whether this web process must reject all mutating routes."""
+    return os.environ.get("AIDAR_READ_ONLY", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+@app.get("/healthz")
+async def healthz() -> dict[str, str]:
     conn = get_conn()
-    leaderboard = get_domain_leaderboard(conn, limit=100)
+    conn.execute("SELECT 1").fetchone()
+    return {"status": "ok", "read_only": "true" if _read_only() else "false"}
+
+
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request, q: str = "", page: int = 1, limit: int = 50, label: str = ""):
+    allowed_labels = {"LIKELY AI", "UNCERTAIN", "LIKELY HUMAN"}
+    if label and label not in allowed_labels:
+        raise HTTPException(status_code=400, detail="Invalid label filter")
+    page = max(page, 1)
+    limit = max(1, min(limit, 100))
+    conn = get_conn()
+    label_filter = label or None
+    total_domains = count_domain_leaderboard(conn, label_filter)
+    leaderboard = get_domain_leaderboard(
+        conn,
+        limit=limit,
+        offset=(page - 1) * limit,
+        label_filter=label_filter,
+    )
     stats = get_global_stats(conn)
-    # Add percentile to each leaderboard row
-    total = stats.get("total_scans") or 1
-    for row in leaderboard:
-        below = conn.execute(
-            "SELECT COUNT(*) FROM scans WHERE domain != '' GROUP BY domain HAVING AVG(score) <= ?",
-            (row["avg_score"],),
-        ).fetchall()
-        row["percentile"] = round(len(below) / max(len(leaderboard), 1) * 100)
+    total_pages = max((total_domains + limit - 1) // limit, 1)
     return templates.TemplateResponse(
-        "index.html",
-        {"request": request, "leaderboard": leaderboard, "stats": stats, "q": q},
+        request=request,
+        name="index.html",
+        context={
+            "request": request,
+            "leaderboard": leaderboard,
+            "stats": stats,
+            "q": q,
+            "label": label,
+            "page": page,
+            "limit": limit,
+            "total_domains": total_domains,
+            "total_pages": total_pages,
+        },
     )
 
 
@@ -171,14 +183,21 @@ async def index(request: Request, q: str = ""):
 async def submit_site(request: Request, background_tasks: BackgroundTasks):
     from fastapi.responses import RedirectResponse
 
+    if _read_only():
+        raise HTTPException(status_code=403, detail="Read-only web replica")
     form = await request.form()
-    domain = str(form.get("domain", "")).strip().lstrip("https://").lstrip("http://").rstrip("/")
+    domain = _normalize_submitted_domain(str(form.get("domain", "")))
     if not domain:
         conn = get_conn()
         return templates.TemplateResponse(
-            "index.html",
-            {"request": request, "leaderboard": get_domain_leaderboard(conn, limit=100),
-             "stats": get_global_stats(conn), "submit_error": "Enter a domain."},
+            request=request,
+            name="index.html",
+            context={
+                "request": request,
+                "leaderboard": get_domain_leaderboard(conn, limit=100),
+                "stats": get_global_stats(conn),
+                "submit_error": "Enter a domain.",
+            },
         )
 
     # Rate limit: already in flight?
@@ -195,9 +214,10 @@ async def submit_site(request: Request, background_tasks: BackgroundTasks):
     stats = get_domain_stats(conn, domain)
     if stats.get("latest"):
         try:
-            from datetime import datetime, timezone
+            from datetime import datetime
+
             latest_dt = datetime.fromisoformat(stats["latest"].replace("Z", "+00:00"))
-            age_s = (datetime.now(timezone.utc) - latest_dt).total_seconds()
+            age_s = (datetime.now(UTC) - latest_dt).total_seconds()
             if age_s < RATE_LIMIT_SECONDS:
                 return RedirectResponse(url=f"/domain/{domain}", status_code=303)
         except Exception:
@@ -216,8 +236,9 @@ async def domain_page(request: Request, domain: str, sort: str = "recent"):
     if stats.get("scans", 0) == 0:
         status_code = 200 if scan_status in ("queued", "running") else 404
         return templates.TemplateResponse(
-            "domain_missing.html",
-            {"request": request, "domain": domain, "scan_status": scan_status},
+            request=request,
+            name="domain_missing.html",
+            context={"request": request, "domain": domain, "scan_status": scan_status},
             status_code=status_code,
         )
     sort = sort if sort in ("recent", "highest", "lowest") else "recent"
@@ -232,9 +253,31 @@ async def domain_page(request: Request, domain: str, sort: str = "recent"):
         except Exception:
             scan["categories"] = {}
 
-    return templates.TemplateResponse(
-        "domain.html",
+    analyzer, _ = _get_analyzer()
+    pattern_catalog = {pattern.id: pattern for pattern in analyzer.registry.all_patterns()}
+    domain_pattern_values: dict[str, list[float]] = {}
+    for scan in scans:
+        for pattern in scan.get("patterns", []):
+            domain_pattern_values.setdefault(pattern["pattern_id"], []).append(
+                float(pattern.get("norm_score") or 0.0)
+            )
+    strongest_patterns = [
         {
+            "id": pattern_id,
+            "name": pattern_catalog[pattern_id].name if pattern_id in pattern_catalog else pattern_id,
+            "avg_score": round(sum(values) / len(values), 3),
+            "version": pattern_catalog[pattern_id].version if pattern_id in pattern_catalog else None,
+        }
+        for pattern_id, values in sorted(
+            domain_pattern_values.items(),
+            key=lambda item: (-sum(item[1]) / len(item[1]), item[0]),
+        )[:8]
+    ]
+
+    return templates.TemplateResponse(
+        request=request,
+        name="domain.html",
+        context={
             "request": request,
             "domain": domain,
             "stats": stats,
@@ -243,6 +286,7 @@ async def domain_page(request: Request, domain: str, sort: str = "recent"):
             "percentile": percentile,
             "top_pages": top_pages,
             "bottom_pages": bottom_pages,
+            "strongest_patterns": strongest_patterns,
             "sort": sort,
             "admin_key_set": bool(ADMIN_KEY),
         },
@@ -253,6 +297,8 @@ async def domain_page(request: Request, domain: str, sort: str = "recent"):
 async def admin_delete_domain(request: Request):
     from fastapi.responses import RedirectResponse
 
+    if _read_only():
+        raise HTTPException(status_code=403, detail="Read-only web replica")
     if not ADMIN_KEY:
         raise HTTPException(status_code=403, detail="Admin key not configured.")
     form = await request.form()
@@ -286,20 +332,118 @@ async def patterns_page(request: Request):
         }
 
     return templates.TemplateResponse(
-        "patterns.html",
-        {"request": request, "patterns": pattern_stats, "stats": global_stats, "catalog": catalog},
+        request=request,
+        name="patterns.html",
+        context={"request": request, "patterns": pattern_stats, "stats": global_stats, "catalog": catalog},
+    )
+
+
+@app.get("/patterns/{pattern_id}", response_class=HTMLResponse)
+async def pattern_detail_page(request: Request, pattern_id: str):
+    analyzer, _ = _get_analyzer()
+    pattern = analyzer.registry.get_pattern(pattern_id)
+    if pattern is None:
+        raise HTTPException(status_code=404, detail="Unknown pattern")
+    conn = get_conn()
+    detail = get_pattern_detail(conn, pattern_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="pattern_detail.html",
+        context={
+            "request": request,
+            "pattern": pattern,
+            "detail": detail,
+            "references": pattern.references,
+        },
     )
 
 
 @app.get("/about", response_class=HTMLResponse)
 async def about(request: Request):
-    return templates.TemplateResponse("about.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="about.html", context={"request": request})
 
 
 @app.get("/api/leaderboard")
-async def api_leaderboard(limit: int = 100):
+async def api_leaderboard(limit: int = 100, offset: int = 0, label: str | None = None):
+    allowed_labels = {"LIKELY AI", "UNCERTAIN", "LIKELY HUMAN"}
+    if label and label not in allowed_labels:
+        raise HTTPException(status_code=400, detail="Invalid label filter")
+    limit = max(1, min(limit, 100))
+    offset = max(offset, 0)
     conn = get_conn()
-    return get_domain_leaderboard(conn, limit=limit)
+    items = get_domain_leaderboard(conn, limit=limit, offset=offset, label_filter=label)
+    total = count_domain_leaderboard(conn, label)
+    return {
+        "items": items,
+        "limit": limit,
+        "offset": offset,
+        "total": total,
+        "next_offset": offset + limit if offset + limit < total else None,
+    }
+
+
+@app.get("/api/docs")
+async def api_docs() -> dict:
+    """Machine-readable public API contract for lightweight consumers."""
+    return {
+        "version": "1",
+        "description": "Aidar stylistic trend index; not an authorship verdict.",
+        "endpoints": {
+            "/api/leaderboard": {
+                "method": "GET",
+                "params": {"limit": "1-100", "offset": "0+", "label": ["LIKELY AI", "UNCERTAIN", "LIKELY HUMAN"]},
+                "response": "{items, limit, offset, total, next_offset}",
+            },
+            "/api/domain/{domain}": {
+                "method": "GET",
+                "response": "{stats, scans}; scans include pattern evidence and scorer metadata",
+            },
+            "/api/scan-status/{domain}": {"method": "GET", "response": "{domain, status, summary}"},
+            "/feed.xml": {"method": "GET", "response": "RSS 2.0 (bounded recent scans)"},
+        },
+        "limits": {"leaderboard_default": 100, "leaderboard_max": 100, "feed_max": 50},
+    }
+
+
+@app.get("/feed.xml")
+async def feed() -> Response:
+    """Return a bounded RSS feed of recently persisted page scans."""
+    conn = get_conn()
+    root = ElementTree.Element(
+        "rss",
+        {"version": "2.0", "xmlns:atom": "http://www.w3.org/2005/Atom"},
+    )
+    channel = ElementTree.SubElement(root, "channel")
+    ElementTree.SubElement(channel, "title").text = "aidar.lol recent scans"
+    ElementTree.SubElement(channel, "link").text = "https://aidar.lol/"
+    ElementTree.SubElement(channel, "description").text = "Recent stylistic index scans"
+    for item in get_recent_scans(conn, limit=50):
+        entry = ElementTree.SubElement(channel, "item")
+        title = item.get("title") or item.get("url") or item.get("domain") or "Aidar scan"
+        ElementTree.SubElement(entry, "title").text = str(title)
+        url = item.get("url")
+        if url:
+            ElementTree.SubElement(entry, "link").text = str(url)
+            ElementTree.SubElement(entry, "guid", {"isPermaLink": "true"}).text = str(url)
+        ElementTree.SubElement(entry, "description").text = (
+            f"{item.get('domain', '')}: stylistic index {item.get('score', '—')} "
+            f"({item.get('label', 'UNCERTAIN')})"
+        )
+        scanned_at = item.get("scanned_at")
+        if scanned_at:
+            try:
+                parsed = datetime.fromisoformat(str(scanned_at).replace("Z", "+00:00"))
+                ElementTree.SubElement(entry, "pubDate").text = parsed.strftime(
+                    "%a, %d %b %Y %H:%M:%S %z"
+                )
+            except ValueError:
+                pass
+    body = ElementTree.tostring(root, encoding="utf-8", xml_declaration=True)
+    return Response(
+        content=body,
+        media_type="application/rss+xml",
+        headers={"Cache-Control": "public, max-age=300"},
+    )
 
 
 @app.get("/api/domain/{domain:path}")
@@ -309,12 +453,28 @@ async def api_domain(domain: str):
     if stats.get("scans", 0) == 0:
         raise HTTPException(status_code=404)
     scans = get_domain_scans(conn, domain)
-    return {"stats": stats, "scans": scans}
+    for scan in scans:
+        try:
+            scan["score_vector"] = json.loads(scan.get("score_json") or "{}")
+        except (TypeError, json.JSONDecodeError):
+            scan["score_vector"] = {}
+        scan.pop("score_json", None)
+    return {
+        "api_version": "1",
+        "description": "Aidar stylistic trend index; not an authorship verdict.",
+        "stats": stats,
+        "scans": scans,
+        "limits": {"scan_rows": 100},
+    }
 
 
 @app.get("/api/scan-status/{domain:path}")
 async def api_scan_status(domain: str):
-    return {"domain": domain, "status": _scan_status.get(domain, "unknown")}
+    return {
+        "domain": domain,
+        "status": _scan_status.get(domain, "unknown"),
+        "summary": _scan_summaries.get(domain),
+    }
 
 
 @app.get("/badge/{domain:path}")
@@ -337,7 +497,7 @@ async def badge(domain: str):
             color = "#4c9"
 
     left = "aidar"
-    lw = len(left) * 7 + 10   # approx pixel width of left label
+    lw = len(left) * 7 + 10  # approx pixel width of left label
     rw = len(right_text) * 7 + 10
     total = lw + rw
     lx = lw // 2
@@ -361,8 +521,9 @@ async def badge(domain: str):
     <text x="{rx}" y="14">{right_text}</text>
   </g>
 </svg>"""
-    return Response(content=svg, media_type="image/svg+xml",
-                    headers={"Cache-Control": "max-age=3600"})
+    return Response(
+        content=svg, media_type="image/svg+xml", headers={"Cache-Control": "max-age=3600"}
+    )
 
 
 @app.get("/og/{domain:path}")
@@ -387,7 +548,9 @@ async def og_image(domain: str):
 
     # Try to load a decent font; fall back to default
     try:
-        font_big = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 96)
+        font_big = ImageFont.truetype(
+            "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 96
+        )
         font_med = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 36)
         font_sm = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 24)
     except Exception:
@@ -438,5 +601,4 @@ async def og_image(domain: str):
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
     buf.seek(0)
-    return StreamingResponse(buf, media_type="image/png",
-                             headers={"Cache-Control": "max-age=3600"})
+    return StreamingResponse(buf, media_type="image/png", headers={"Cache-Control": "max-age=3600"})

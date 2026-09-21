@@ -26,5 +26,13 @@ aidar.db-wal
 .aidar.db-litestream/
 .*.db-litestream/
 .db-backups/
+.oneoff-backups/
+.aidar-*.txt
+.aidar-*.tsv
+blog_site_list.csv
+domains-meta.csv
+failed-discovery.log
+.benchmark-data/
+.benchmark-inputs/
+benchmark-reports/
 inbox
-uv.lock

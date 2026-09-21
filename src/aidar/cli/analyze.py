@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 import click
@@ -9,7 +10,7 @@ from aidar.core.fetcher import FetchError, FetchResult, count_words, fetch_url, 
 from aidar.core.scorer import compare_model_profile, compute_aggregate
 from aidar.output.formatters import to_json
 from aidar.output.renderer import render_error, render_result
-from aidar.patterns.loader import load_model_profile, PatternLoadError
+from aidar.patterns.loader import PatternLoadError, load_model_profile
 
 
 @aidar.command()
@@ -32,7 +33,14 @@ from aidar.patterns.loader import load_model_profile, PatternLoadError
     help="Minimum word count; warn if below this",
 )
 @click.option(
-    "--verbose", "-v",
+    "--published-date",
+    default=None,
+    metavar="YYYY-MM-DD",
+    help="Override a missing publication date (strict ISO calendar date).",
+)
+@click.option(
+    "--verbose",
+    "-v",
     is_flag=True,
     default=False,
     help="Show per-pattern breakdown",
@@ -44,6 +52,7 @@ def analyze(
     text: str | None,
     compare_model: str | None,
     min_words: int,
+    published_date: str | None,
     verbose: bool,
 ) -> None:
     """Analyze a URL, local file, or raw text for AI-generated stylistic signals."""
@@ -51,6 +60,14 @@ def analyze(
     config = ctx.obj["config"]
     output_format = ctx.obj["output"]
     patterns_dir = ctx.obj["patterns_dir"]
+
+    if published_date is not None:
+        try:
+            parsed_date = date.fromisoformat(published_date)
+        except ValueError as exc:
+            raise click.BadParameter("must be a valid ISO date (YYYY-MM-DD)", param_hint="--published-date") from exc
+        if parsed_date.isoformat() != published_date:
+            raise click.BadParameter("must use YYYY-MM-DD with zero padding", param_hint="--published-date")
 
     # Fetch text
     try:
@@ -69,7 +86,12 @@ def analyze(
             raise click.UsageError("Provide a TARGET (URL or file path) or use --text TEXT.")
     except FetchError as e:
         render_error(str(e))
-        raise SystemExit(1)
+        raise SystemExit(1) from e
+
+    # Publisher metadata always wins.  The explicit value only fills a missing
+    # date so historical imports cannot accidentally rewrite source dates.
+    if published_date is not None and not fetch.published_date:
+        fetch.published_date = published_date
 
     if fetch.word_count < min_words:
         click.echo(
@@ -81,8 +103,10 @@ def analyze(
     # Run analysis
     score_vector = analyzer.run(fetch.text, fetch.word_count, raw_html=fetch.raw_html)
     result = compute_aggregate(
-        score_vector, config,
-        url=url, file_path=file_path,
+        score_vector,
+        config,
+        url=url,
+        file_path=file_path,
         word_count=fetch.word_count,
         published_date=fetch.published_date,
         title=fetch.title,

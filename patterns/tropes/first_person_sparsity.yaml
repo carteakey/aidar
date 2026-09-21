@@ -1,0 +1,19 @@
+id: first_person_sparsity
+version: 1
+name: First-Person Sparsity
+description: >
+  Measures the absence of first-person pronouns. A low rate is frequent in
+  generated expository prose but also expected in many human technical texts.
+category: tropes
+weight: 0.20
+detection_type: linguistic
+severity: low
+references:
+  - https://arxiv.org/abs/2410.16107
+params:
+  metric: first_person_rate
+  per_n_words: 100
+  max_rate: 10.0
+  threshold_low: 1.0
+  threshold_high: 8.0
+

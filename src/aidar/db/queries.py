@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Mapping
+from datetime import date
 from urllib.parse import urlparse
 
 from aidar.models.result import AggregateResult
@@ -24,8 +26,8 @@ def store_result(conn: sqlite3.Connection, result: AggregateResult) -> int:
         """
         INSERT INTO scans
             (url, domain, file_path, word_count, score, label, score_json,
-             scanned_at, published_date, title)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             scanned_at, published_date, title, source_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(url) DO UPDATE SET
             word_count=excluded.word_count,
             score=excluded.score,
@@ -33,7 +35,8 @@ def store_result(conn: sqlite3.Connection, result: AggregateResult) -> int:
             score_json=excluded.score_json,
             scanned_at=excluded.scanned_at,
             published_date=COALESCE(excluded.published_date, scans.published_date),
-            title=COALESCE(excluded.title, scans.title)
+            title=COALESCE(excluded.title, scans.title),
+            source_url=COALESCE(excluded.source_url, scans.source_url)
         """,
         (
             result.url,
@@ -46,13 +49,16 @@ def store_result(conn: sqlite3.Connection, result: AggregateResult) -> int:
             result.scanned_at.isoformat(),
             result.published_date,
             result.title,
+            result.source_url,
         ),
     )
     # Always fetch the real ID — lastrowid is unreliable for ON CONFLICT DO UPDATE
-    scan_id = conn.execute(
-        "SELECT id FROM scans WHERE url = ? OR (url IS NULL AND file_path = ?)",
-        (result.url, result.file_path),
-    ).fetchone()[0]
+    scan_id = int(
+        conn.execute(
+            "SELECT id FROM scans WHERE url = ? OR (url IS NULL AND file_path = ?)",
+            (result.url, result.file_path),
+        ).fetchone()[0]
+    )
 
     # Delete old pattern scores for this scan (in case of update)
     conn.execute("DELETE FROM pattern_scores WHERE scan_id = ?", (scan_id,))
@@ -136,6 +142,38 @@ def get_pattern_stats(conn: sqlite3.Connection) -> list[dict]:
     return [dict(row) for row in rows]
 
 
+def get_pattern_detail(conn: sqlite3.Connection, pattern_id: str, limit: int = 20) -> dict:
+    """Return aggregate stats plus representative evidence for one pattern."""
+    summary = conn.execute(
+        """
+        SELECT pattern_id, category, AVG(norm_score) AS avg_score,
+               COUNT(*) AS occurrences, MAX(pattern_version) AS version,
+               MAX(pattern_hash) AS pattern_hash
+        FROM pattern_scores
+        WHERE pattern_id = ?
+        GROUP BY pattern_id, category
+        """,
+        (pattern_id,),
+    ).fetchone()
+    rows = conn.execute(
+        """
+        SELECT s.url, s.domain, s.scanned_at, s.word_count,
+               ps.raw_value, ps.norm_score, ps.pattern_version, ps.pattern_hash
+        FROM pattern_scores ps
+        JOIN scans s ON s.id = ps.scan_id
+        WHERE ps.pattern_id = ?
+        ORDER BY ps.norm_score DESC, s.scanned_at DESC, s.url ASC
+        LIMIT ?
+        """,
+        (pattern_id, max(1, min(limit, 100))),
+    ).fetchall()
+    return {
+        "pattern_id": pattern_id,
+        "summary": dict(summary) if summary else None,
+        "evidence": [dict(row) for row in rows],
+    }
+
+
 def url_already_scanned(conn: sqlite3.Connection, url: str) -> bool:
     row = conn.execute("SELECT id FROM scans WHERE url = ?", (url,)).fetchone()
     return row is not None
@@ -143,7 +181,7 @@ def url_already_scanned(conn: sqlite3.Connection, url: str) -> bool:
 
 def get_stale_urls(
     conn: sqlite3.Connection,
-    current_versions: dict[str, int | tuple[int, str]],
+    current_versions: Mapping[str, int | tuple[int, str]],
     domain: str | None = None,
 ) -> list[str]:
     """
@@ -173,11 +211,14 @@ def get_stale_urls(
         )
         SELECT DISTINCT s.url
         FROM scans s
-        JOIN pattern_scores ps ON ps.scan_id = s.id
-        JOIN current c ON c.pattern_id = ps.pattern_id
+        CROSS JOIN current c
+        LEFT JOIN pattern_scores ps
+          ON ps.scan_id = s.id
+         AND ps.pattern_id = c.pattern_id
         WHERE s.url IS NOT NULL
           AND (
-                ps.pattern_version < c.pattern_version
+                ps.scan_id IS NULL
+                OR ps.pattern_version < c.pattern_version
                 OR (
                     c.pattern_hash != ''
                     AND COALESCE(ps.pattern_hash, '') != c.pattern_hash
@@ -229,7 +270,7 @@ def get_corpus_percentile(conn: sqlite3.Connection, score: int) -> float:
     if not total:
         return 0.0
     below = conn.execute("SELECT COUNT(*) FROM scans WHERE score <= ?", (score,)).fetchone()[0]
-    return round(below / total, 3)
+    return float(round(below / total, 3))
 
 
 def get_domain_scans(
@@ -245,13 +286,163 @@ def get_domain_scans(
     }.get(sort, "scanned_at DESC")
     rows = conn.execute(
         f"""
-        SELECT url, word_count, score, label, score_json, scanned_at
+        SELECT id AS scan_id, url, word_count, score, label, score_json, scanned_at,
+               published_date, title, source_url
         FROM scans
         WHERE domain = ?
         ORDER BY {order}
         LIMIT ?
         """,
         (domain, limit),
+    ).fetchall()
+    result: list[dict] = []
+    for row in rows:
+        item = dict(row)
+        scan_id = item.pop("scan_id")
+        pattern_rows = conn.execute(
+            """
+            SELECT pattern_id, category, raw_value, norm_score,
+                   pattern_version, pattern_hash
+            FROM pattern_scores
+            WHERE scan_id = ?
+            ORDER BY norm_score DESC, pattern_id ASC
+            """,
+            (scan_id,),
+        ).fetchall()
+        item["patterns"] = [dict(pattern) for pattern in pattern_rows]
+        result.append(item)
+    return result
+
+
+def export_scans(
+    conn: sqlite3.Connection,
+    *,
+    domain: str | None = None,
+    label: str | None = None,
+    published_from: date | None = None,
+    published_to: date | None = None,
+) -> list[dict]:
+    """Return deterministic, lossless scan rows for export workflows."""
+    clauses: list[str] = []
+    params: list[str] = []
+    if domain:
+        clauses.append("s.domain = ?")
+        params.append(domain)
+    if label:
+        clauses.append("s.label = ?")
+        params.append(label)
+    if published_from:
+        clauses.append("s.published_date >= ?")
+        params.append(published_from.isoformat())
+    if published_to:
+        clauses.append("s.published_date <= ?")
+        params.append(published_to.isoformat())
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    rows = conn.execute(
+        f"""
+        SELECT s.id, s.url, s.domain, s.file_path, s.word_count, s.score, s.label,
+               s.score_json, s.scanned_at, s.published_date, s.title, s.source_url
+        FROM scans s
+        {where}
+        ORDER BY COALESCE(s.url, s.file_path, ''), s.id
+        """,
+        params,
+    ).fetchall()
+    exported: list[dict] = []
+    for row in rows:
+        item = dict(row)
+        try:
+            item["score_vector"] = json.loads(item.pop("score_json") or "{}")
+        except (TypeError, json.JSONDecodeError):
+            item["score_vector"] = {}
+        pattern_rows = conn.execute(
+            """
+            SELECT pattern_id, category, raw_value, norm_score,
+                   pattern_version, pattern_hash
+            FROM pattern_scores
+            WHERE scan_id = ?
+            ORDER BY pattern_id
+            """,
+            (row["id"],),
+        ).fetchall()
+        item["patterns"] = [dict(pattern) for pattern in pattern_rows]
+        exported.append(item)
+    return exported
+
+
+def get_domain_diff(
+    conn: sqlite3.Connection,
+    domain: str,
+    first_date: date,
+    second_date: date,
+) -> dict:
+    """Compare deterministic per-day aggregates for a domain."""
+    if first_date > second_date:
+        raise ValueError("first date must not be after second date")
+
+    def snapshot(day: date) -> dict | None:
+        rows = conn.execute(
+            """
+            SELECT score, score_json, url
+            FROM scans
+            WHERE domain = ? AND substr(scanned_at, 1, 10) = ?
+            ORDER BY COALESCE(url, ''), id
+            """,
+            (domain, day.isoformat()),
+        ).fetchall()
+        if not rows:
+            return None
+        scores = [int(row["score"]) for row in rows]
+        categories: dict[str, list[float]] = {}
+        for row in rows:
+            try:
+                vector = json.loads(row["score_json"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                vector = {}
+            for key, value in vector.items():
+                if isinstance(value, (int, float)):
+                    categories.setdefault(key, []).append(float(value))
+        return {
+            "date": day.isoformat(),
+            "pages": len(rows),
+            "score": round(sum(scores) / len(scores), 2),
+            "categories": {
+                key: round(sum(values) / len(values), 4)
+                for key, values in sorted(categories.items())
+            },
+        }
+
+    before = snapshot(first_date)
+    after = snapshot(second_date)
+    if before is None or after is None:
+        return {"domain": domain, "before": before, "after": after, "delta": None}
+    category_keys = sorted(set(before["categories"]) | set(after["categories"]))
+    return {
+        "domain": domain,
+        "before": before,
+        "after": after,
+        "delta": {
+            "pages": after["pages"] - before["pages"],
+            "score": round(after["score"] - before["score"], 2),
+            "categories": {
+                key: round(after["categories"].get(key, 0.0) - before["categories"].get(key, 0.0), 4)
+                for key in category_keys
+            },
+        },
+    }
+
+
+def get_recent_scans(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
+    """Return recent persisted scans for RSS/Atom feeds."""
+    rows = conn.execute(
+        """
+        SELECT url, domain, title, score, label, scanned_at, published_date
+        FROM scans
+        WHERE url IS NOT NULL
+        ORDER BY scanned_at DESC, id DESC
+        LIMIT ?
+        """,
+        (max(1, min(limit, 200)),),
     ).fetchall()
     return [dict(row) for row in rows]
 
@@ -263,8 +454,12 @@ def get_domain_extremes(
 ) -> tuple[list[dict], list[dict]]:
     """Return (top_n highest scoring, top_n lowest scoring) pages for a domain."""
     base = "SELECT url, word_count, score, label, scanned_at FROM scans WHERE domain = ? AND word_count > 100"
-    highest = [dict(r) for r in conn.execute(f"{base} ORDER BY score DESC LIMIT ?", (domain, n)).fetchall()]
-    lowest = [dict(r) for r in conn.execute(f"{base} ORDER BY score ASC LIMIT ?", (domain, n)).fetchall()]
+    highest = [
+        dict(r) for r in conn.execute(f"{base} ORDER BY score DESC LIMIT ?", (domain, n)).fetchall()
+    ]
+    lowest = [
+        dict(r) for r in conn.execute(f"{base} ORDER BY score ASC LIMIT ?", (domain, n)).fetchall()
+    ]
     return highest, lowest
 
 
@@ -292,22 +487,57 @@ def delete_domain(conn: sqlite3.Connection, domain: str) -> int:
     return cur.rowcount
 
 
-def get_domain_leaderboard(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
+def get_domain_leaderboard(
+    conn: sqlite3.Connection,
+    limit: int = 50,
+    offset: int = 0,
+    label_filter: str | None = None,
+) -> list[dict]:
     """Return per-domain aggregated stats for the leaderboard."""
+    params: list[object] = []
+    where = "WHERE domain != ''"
+    having = ""
+    if label_filter:
+        having = "HAVING SUM(CASE WHEN label = ? THEN 1 ELSE 0 END) > 0"
     rows = conn.execute(
-        """
-        SELECT
-            domain,
-            COUNT(*) as pages,
-            ROUND(AVG(score), 1) as avg_score,
-            MAX(score) as max_score,
-            MAX(scanned_at) as last_scanned
+        f"""
+        SELECT domain,
+               COUNT(*) as pages,
+               ROUND(AVG(score), 1) as avg_score,
+               MAX(score) as max_score,
+               MAX(scanned_at) as last_scanned,
+               (SELECT s2.label FROM scans s2
+                WHERE s2.domain = scans.domain
+                ORDER BY s2.scanned_at DESC, s2.id DESC LIMIT 1) as last_label
         FROM scans
-        WHERE domain != ''
+        {where}
         GROUP BY domain
-        ORDER BY avg_score DESC
-        LIMIT ?
+        {having}
+        ORDER BY avg_score DESC, domain ASC
+        LIMIT ? OFFSET ?
         """,
-        (limit,),
+        ((*params, label_filter) if label_filter else tuple())
+        + (max(1, min(limit, 200)), max(0, offset)),
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def count_domain_leaderboard(conn: sqlite3.Connection, label_filter: str | None = None) -> int:
+    """Count leaderboard domains using the same optional label semantics."""
+    if label_filter:
+        return int(
+            conn.execute(
+                """
+                SELECT COUNT(*) FROM (
+                    SELECT domain FROM scans
+                    WHERE domain != ''
+                    GROUP BY domain
+                    HAVING SUM(CASE WHEN label = ? THEN 1 ELSE 0 END) > 0
+                )
+                """,
+                (label_filter,),
+            ).fetchone()[0]
+        )
+    return int(
+        conn.execute("SELECT COUNT(DISTINCT domain) FROM scans WHERE domain != ''").fetchone()[0]
+    )

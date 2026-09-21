@@ -1,0 +1,19 @@
+id: local_repetition
+version: 1
+name: Local Sentence Repetition
+description: >
+  Finds near-duplicate sentences within a three-sentence window. It catches
+  obvious restatement but does not claim semantic equivalence.
+category: structure
+weight: 0.25
+detection_type: linguistic
+severity: low
+references:
+  - https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+params:
+  metric: local_repetition
+  window: 3
+  similarity: 0.8
+  threshold_low: 2.0
+  threshold_high: 25.0
+

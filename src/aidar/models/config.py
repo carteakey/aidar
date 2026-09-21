@@ -5,15 +5,24 @@ from dataclasses import dataclass
 
 @dataclass
 class WeightConfig:
-    tropes: float = 0.40      # AI writing tropes — heaviest signal
+    tropes: float = 0.40  # AI writing tropes — heaviest signal
     phrases: float = 0.20
     punctuation: float = 0.15
     structure: float = 0.10
     vocabulary: float = 0.10
-    emoji: float = 0.10
+    emoji: float = 0.05
 
     def validate(self) -> None:
-        total = sum([self.tropes, self.punctuation, self.phrases, self.structure, self.vocabulary, self.emoji])
+        total = sum(
+            [
+                self.tropes,
+                self.punctuation,
+                self.phrases,
+                self.structure,
+                self.vocabulary,
+                self.emoji,
+            ]
+        )
         if abs(total - 1.0) > 0.01:
             raise ValueError(f"Category weights must sum to 1.0, got {total:.3f}")
 

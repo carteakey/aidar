@@ -28,7 +28,7 @@
     {% set meta = catalog.get(p.pattern_id, {}) %}
     <tr title="{{ meta.get('description', '') }}">
       <td>
-        <span>{{ p.pattern_id }}</span>
+        <a href="/patterns/{{ p.pattern_id }}">{{ p.pattern_id }}</a>
         {% if meta.get('description') %}
         <div class="c-dim" style="font-size:0.72rem;margin-top:2px">{{ meta.description }}</div>
         {% endif %}
@@ -66,7 +66,7 @@
     {% for pid, meta in catalog.items() | sort %}
     <tr>
       <td>
-        <span>{{ pid }}</span>
+        <a href="/patterns/{{ pid }}">{{ pid }}</a>
         {% if meta.get('description') %}
         <div class="c-dim" style="font-size:0.72rem;margin-top:2px">{{ meta.description }}</div>
         {% endif %}

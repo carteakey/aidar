@@ -14,6 +14,7 @@ The current full inventory (with thresholds/weights) lives in [`docs/PATTERN_CAT
 
    | Category      | What it captures |
    |---------------|-----------------|
+   | `tropes/`     | Recurring rhetorical and presentation constructions |
    | `phrases/`    | Specific word/phrase clusters (hedging, AI idioms, transitions) |
    | `punctuation/`| Character-level overuse (em dashes, ellipses) |
    | `structure/`  | Document shape (bullet density, headers, sentence uniformity) |
@@ -50,9 +51,9 @@ version: 1                     # start at 1; bump when thresholds or logic chang
 description: >
   1–3 sentences explaining what this pattern detects and why it's
   associated with AI-era writing. Cite sources if you have them.
-category: phrases              # phrases | punctuation | structure | vocabulary | emoji
+category: phrases              # tropes | phrases | punctuation | structure | vocabulary | emoji
 weight: 0.70                   # 0.0–1.0, relative importance within the category
-detection_type: frequency      # regex | frequency | structural | linguistic
+detection_type: frequency      # regex | html_regex | frequency | structural | linguistic
 severity: medium               # low | medium | high
 references:
   - https://source-that-inspired-this.example.com
@@ -122,33 +123,14 @@ Note: aidar also stores a pattern fingerprint hash with each score and uses it f
 
 ## Improving thresholds
 
-If you're seeing too many false positives or the pattern isn't firing on text you know is AI-generated, open an issue with:
+If you're seeing too many false positives or the pattern isn't firing on text with known provenance, open a discussion issue with:
 - The text sample (or a representative excerpt)
 - The raw value the pattern reported (`aidar analyze --verbose`)
 - Your proposed threshold adjustment
 
-Label: `threshold-calibration`
-
----
-
-## Submitting known AI samples
-
-The more calibration data, the better. If you have samples of known AI-generated content (from a specific model, context, or publication) that reveal new patterns:
-
-1. Open an issue labeled `pattern-signal` with the sample and your observations
-2. Or just open a PR adding a new pattern — the description should explain what you found
-
----
-
-## GitHub issue labels
-
-| Label | Use for |
-|-------|---------|
-| `new-pattern` | Proposing a new signal |
-| `threshold-calibration` | Existing pattern firing too much or too little |
-| `false-positive-report` | Pattern scoring high on text you believe is human |
-| `pattern-signal` | Sharing sample text that reveals a new signal |
-| `model-profile` | Updates to `patterns/models/*.yaml` baselines |
+GitHub issues are public contributor intake, not a second project backlog. The
+[Aidar Linear project](https://linear.app/carteakey/project/aidar-8a949b456d2b)
+remains authoritative for committed work.
 
 ---
 
@@ -170,7 +152,8 @@ The more calibration data, the better. If you have samples of known AI-generated
 
 ## Perplexity and burstiness (advanced)
 
-Real perplexity scoring requires a language model and is tracked in [#TODO issue]. If you want to experiment with this, the optional `nlp` dependency group is reserved for it:
+Real perplexity scoring requires a language model and remains a research idea in
+`TODO.md`. An optional `nlp` dependency group may be added if that work is promoted:
 
 ```bash
 pip install "aidar[nlp]"  # future

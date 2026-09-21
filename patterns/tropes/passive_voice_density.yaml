@@ -1,0 +1,19 @@
+id: passive_voice_density
+version: 1
+name: Passive-Voice Density
+description: >
+  A dependency-free estimate of passive constructions per sentence. Passive
+  voice is common in legitimate technical and formal prose, so this remains a
+  low-severity contextual signal.
+category: tropes
+weight: 0.25
+detection_type: linguistic
+severity: low
+references:
+  - https://arxiv.org/abs/2410.16107
+params:
+  metric: passive_voice_rate
+  per_n_sentences: 100
+  threshold_low: 2.0
+  threshold_high: 15.0
+

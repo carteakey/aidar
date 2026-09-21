@@ -7,6 +7,15 @@ Pattern version bumps are noted separately from tool version bumps.
 
 ---
 
+## Unreleased
+
+- Added a committed `uv` lockfile and CI checks for Python 3.11 and 3.12.
+- Consolidated ad hoc scripts into focused pytest regressions; Ruff and mypy now
+  have explicit, passing repository contracts.
+- Fixed stale-scan detection for patterns absent from an older scan.
+- Fixed submitted-domain normalization and preserved raw HTML in web-triggered scans.
+- Aligned package metadata and runtime version reporting with v0.4.0.
+
 ## Tool Changes
 
 ### [0.4.0] — 2026-03-09

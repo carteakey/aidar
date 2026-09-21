@@ -1,15 +1,30 @@
 from __future__ import annotations
 
 import asyncio
+import sqlite3
+from typing import TypedDict
 from urllib.parse import urlparse
 
 import click
-import httpx
 
-from aidar.cli.discover import _from_rss, _from_sitemap, _normalize_domain
 from aidar.cli.main import aidar
-from aidar.cli.scan import _scan_one
+from aidar.core.analyzer import Analyzer
+from aidar.core.discovery import discover_urls, normalize_domain
+from aidar.core.ingestion import ScanSummary, filter_prose_urls, scan_urls
+from aidar.models.config import AppConfig
 from aidar.output.renderer import console
+from aidar.patterns.registry import PatternRegistry
+
+
+class TrackSummary(TypedDict):
+    status: str
+    discovered: int
+    queued: int
+    saved: int
+    filtered: int
+    attempted: int
+    failed: int
+    reasons: dict[str, int]
 
 
 @aidar.command()
@@ -98,9 +113,9 @@ def track(
 
 def run_track_domain(
     *,
-    analyzer,
-    config,
-    registry,
+    analyzer: Analyzer,
+    config: AppConfig,
+    registry: PatternRegistry,
     domain: str,
     limit: int = 100,
     concurrency: int = 10,
@@ -109,12 +124,12 @@ def run_track_domain(
     source: str = "auto",
     rescan_stale: bool = True,
     skip_patterns: tuple[str, ...] = (),
-) -> dict[str, int]:
+) -> TrackSummary:
     """
     Shared track execution for CLI and background worker.
     Returns summary counters for observability.
     """
-    base_url = _normalize_domain(domain)
+    base_url = normalize_domain(domain)
     domain_name = urlparse(base_url).netloc
 
     console.print(f"\n[bold]Tracking:[/bold] {domain_name}")
@@ -125,32 +140,24 @@ def run_track_domain(
 
     conn = get_connection(db_path)
 
-    urls: list[str] = []
-    if source in ("auto", "sitemap"):
-        urls = _from_sitemap(base_url)
-    if not urls and source in ("auto", "rss"):
-        urls = _from_rss(base_url)
-
+    urls, discovery_method = discover_urls(base_url, source)
     discovered_count = len(urls)
+    summary = ScanSummary(discovered=discovered_count)
     if urls:
-        console.print(f"[dim]Discovered {len(urls)} URLs.[/dim]")
+        console.print(f"[dim]Discovered {len(urls)} URLs via {discovery_method}.[/dim]")
     else:
-        console.print(f"[yellow]Could not discover any URLs for {domain_name} via {source}.[/yellow]")
+        console.print(
+            f"[yellow]Could not discover any URLs for {domain_name} via {source}.[/yellow]"
+        )
 
-    if skip_patterns:
-        before = len(urls)
-        urls = [u for u in urls if not any(p in u for p in skip_patterns)]
-        filtered = before - len(urls)
-        if filtered:
-            console.print(f"[dim]Filtered {filtered} URLs matching skip patterns.[/dim]")
+    filtered_urls = filter_prose_urls(urls, base_url=base_url, skip_patterns=skip_patterns)
+    urls = filtered_urls.kept
+    summary.record_rejections(filtered_urls.rejected)
 
     if rescan_stale:
         from aidar.db.queries import get_stale_urls
 
-        current_signatures = {
-            p.id: (p.version, p.fingerprint())
-            for p in registry.all_patterns()
-        }
+        current_signatures = {p.id: (p.version, p.fingerprint()) for p in registry.all_patterns()}
         stale = set(get_stale_urls(conn, current_signatures, domain=domain_name))
         if stale:
             console.print(
@@ -160,13 +167,23 @@ def run_track_domain(
         else:
             console.print("[dim]No stale URLs found.[/dim]")
             if skip_existing:
+                before = len(urls)
                 urls = [u for u in urls if not url_already_scanned(conn, u)]
+                skipped = before - len(urls)
+                summary.filtered += skipped
+                summary.reasons["already_scanned"] += skipped
     elif skip_existing:
         before = len(urls)
         urls = [u for u in urls if not url_already_scanned(conn, u)]
         skipped = before - len(urls)
         if skipped:
             console.print(f"[dim]Skipping {skipped} already-scanned URLs.[/dim]")
+            summary.filtered += skipped
+            summary.reasons["already_scanned"] += skipped
+
+    final_filter = filter_prose_urls(urls, base_url=base_url, skip_patterns=skip_patterns)
+    urls = final_filter.kept
+    summary.record_rejections(final_filter.rejected)
 
     if not urls:
         if discovered_count == 0:
@@ -175,42 +192,60 @@ def run_track_domain(
             console.print("[green]All URLs already up to date.[/green]")
             status = "all_existing"
         _print_domain_summary(conn, domain_name)
-        return {"status": status, "discovered": discovered_count, "queued": 0, "saved": 0}
+        console.print(
+            "[bold]Run summary:[/bold] "
+            f"discovered={summary.discovered} filtered={summary.filtered} "
+            "attempted=0 saved=0 failed=0"
+        )
+        return {
+            "status": status,
+            "discovered": discovered_count,
+            "queued": 0,
+            "saved": 0,
+            "filtered": summary.filtered,
+            "attempted": 0,
+            "failed": 0,
+            "reasons": dict(summary.reasons),
+        }
 
-    urls = urls[:limit]
+    if len(urls) > limit:
+        deferred = len(urls) - limit
+        summary.filtered += deferred
+        summary.reasons["limit"] += deferred
+        urls = urls[:limit]
     console.print(f"[bold]Scanning {len(urls)} URLs (concurrency={concurrency})...[/bold]\n")
 
-    from rich.progress import Progress, SpinnerColumn, BarColumn, TaskProgressColumn, TextColumn
-
-    async def run():
-        semaphore = asyncio.Semaphore(concurrency)
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TaskProgressColumn(),
-            console=console,
-        ) as progress:
-            task = progress.add_task(f"Scanning {domain_name}...", total=len(urls))
-            async with httpx.AsyncClient(timeout=30) as client:
-                tasks = [
-                    _scan_one(url, analyzer, config, client, semaphore, 0.0, progress, task)
-                    for url in urls
-                ]
-                raw = await asyncio.gather(*tasks, return_exceptions=True)
-        return [r for r in raw if r is not None and not isinstance(r, Exception)]
-
-    results = asyncio.run(run())
+    outcomes = asyncio.run(scan_urls(urls, analyzer, config, concurrency=concurrency))
+    summary.record_outcomes(outcomes)
+    results = [outcome.result for outcome in outcomes if outcome.result is not None]
     for result in results:
         store_result(conn, result)
 
     console.print(f"\n[green]Saved {len(results)} results to {db_path}[/green]")
+    console.print(
+        "[bold]Run summary:[/bold] "
+        f"discovered={summary.discovered} filtered={summary.filtered} "
+        f"attempted={summary.attempted} saved={summary.saved} failed={summary.failed}"
+    )
+    if summary.reasons:
+        reasons = ", ".join(f"{key}={value}" for key, value in sorted(summary.reasons.items()))
+        console.print(f"[dim]Ingestion reasons: {reasons}[/dim]")
     _print_domain_summary(conn, domain_name)
-    return {"status": "scanned", "discovered": discovered_count, "queued": len(urls), "saved": len(results)}
+    return {
+        "status": "scanned",
+        "discovered": discovered_count,
+        "queued": len(urls),
+        "saved": len(results),
+        "filtered": summary.filtered,
+        "attempted": summary.attempted,
+        "failed": summary.failed,
+        "reasons": dict(sorted(summary.reasons.items())),
+    }
 
 
-def _print_domain_summary(conn, domain: str) -> None:
+def _print_domain_summary(conn: sqlite3.Connection, domain: str) -> None:
     from aidar.db.queries import get_domain_stats
+
     stats = get_domain_stats(conn, domain)
     if stats.get("scans", 0) == 0:
         return

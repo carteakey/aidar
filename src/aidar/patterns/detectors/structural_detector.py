@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import re
 import statistics
-import unicodedata
 
-from aidar.models.pattern import PatternDef
 from aidar.models.result import PatternResult
 from aidar.patterns.detectors.base import BaseDetector
 
@@ -15,12 +13,12 @@ _HEADER_RE = re.compile(r"^#{1,6}\s+\S", re.MULTILINE)
 # Unicode emoji ranges (simplified but covers common blocks)
 _EMOJI_RE = re.compile(
     "["
-    "\U0001F600-\U0001F64F"  # emoticons
-    "\U0001F300-\U0001F5FF"  # symbols & pictographs
-    "\U0001F680-\U0001F6FF"  # transport & map
-    "\U0001F1E0-\U0001F1FF"  # flags
-    "\U00002702-\U000027B0"
-    "\U000024C2-\U0001F251"
+    "\U0001f600-\U0001f64f"  # emoticons
+    "\U0001f300-\U0001f5ff"  # symbols & pictographs
+    "\U0001f680-\U0001f6ff"  # transport & map
+    "\U0001f1e0-\U0001f1ff"  # flags
+    "\U00002702-\U000027b0"
+    "\U000024c2-\U0001f251"
     "]+",
     flags=re.UNICODE,
 )
@@ -44,7 +42,7 @@ class StructuralDetector(BaseDetector):
             raise ValueError(f"Unknown structural metric: {metric}")
 
     def _bullet_density(self, text: str) -> PatternResult:
-        lines = [l for l in text.splitlines() if l.strip()]
+        lines = [line for line in text.splitlines() if line.strip()]
         if not lines:
             return self._make_result(0.0, "0.0% bullet lines")
         bullet_lines = len(_BULLET_RE.findall(text))
@@ -54,7 +52,7 @@ class StructuralDetector(BaseDetector):
     def _header_ratio(self, text: str, word_count: int) -> PatternResult:
         headers = len(_HEADER_RE.findall(text))
         ratio = headers / max(word_count, 1)
-        return self._make_result(ratio, f"{headers} headers ({ratio*1000:.1f} per 1000 words)")
+        return self._make_result(ratio, f"{headers} headers ({ratio * 1000:.1f} per 1000 words)")
 
     def _paragraph_uniformity(self, text: str) -> PatternResult:
         # Split on blank lines to get paragraphs
@@ -76,4 +74,4 @@ class StructuralDetector(BaseDetector):
         char_count = max(len(text), 1)
         emoji_count = len(_EMOJI_RE.findall(text))
         ratio = emoji_count / char_count
-        return self._make_result(ratio, f"{emoji_count} emojis ({ratio*1000:.2f} per 1000 chars)")
+        return self._make_result(ratio, f"{emoji_count} emojis ({ratio * 1000:.2f} per 1000 chars)")

@@ -50,8 +50,20 @@
 {% if leaderboard %}
 <div class="section-header">
   <span class="section-title">domain leaderboard</span>
-  <span class="c-dim" style="font-size:0.75rem">ranked by avg stylistic index &darr;</span>
+  <span class="c-dim" style="font-size:0.75rem">ranked by avg stylistic index &darr; ({{ total_domains }} domains)</span>
 </div>
+
+<form class="leaderboard-filters" method="get" action="/">
+  <label for="label">label</label>
+  <select id="label" name="label">
+    <option value=""{% if not label %} selected{% endif %}>all</option>
+    <option value="LIKELY AI"{% if label == "LIKELY AI" %} selected{% endif %}>LIKELY AI</option>
+    <option value="UNCERTAIN"{% if label == "UNCERTAIN" %} selected{% endif %}>UNCERTAIN</option>
+    <option value="LIKELY HUMAN"{% if label == "LIKELY HUMAN" %} selected{% endif %}>LIKELY HUMAN</option>
+  </select>
+  <input type="hidden" name="limit" value="{{ limit }}">
+  <button type="submit">apply</button>
+</form>
 
 <table class="data-table">
   <thead>
@@ -60,6 +72,7 @@
       <th>domain</th>
       <th>index</th>
       <th>pages</th>
+      <th>label</th>
       <th>last scanned</th>
     </tr>
   </thead>
@@ -88,11 +101,18 @@
         </div>
       </td>
       <td class="c-dim">{{ row.pages }}</td>
+      <td><span class="label {% if row.last_label == 'LIKELY AI' %}label-ai{% elif row.last_label == 'LIKELY HUMAN' %}label-human{% else %}label-unknown{% endif %}">{{ row.last_label or '—' }}</span></td>
       <td class="c-dim" style="font-size:0.75rem">{{ row.last_scanned[:10] if row.last_scanned else '—' }}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+
+<nav class="pagination" aria-label="Leaderboard pages">
+  {% if page > 1 %}<a href="/?page={{ page - 1 }}&limit={{ limit }}&label={{ label|urlencode }}">← newer</a>{% endif %}
+  <span>page {{ page }} / {{ total_pages }}</span>
+  {% if page < total_pages %}<a href="/?page={{ page + 1 }}&limit={{ limit }}&label={{ label|urlencode }}">older →</a>{% endif %}
+</nav>
 
 {% else %}
 <div class="empty">

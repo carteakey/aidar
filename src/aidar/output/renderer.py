@@ -83,7 +83,13 @@ def render_result(result: AggregateResult, show_patterns: bool = False) -> None:
             reverse=True,
         )
         for r in sorted_results:
-            color = "red" if r.normalized_score >= 0.65 else "yellow" if r.normalized_score >= 0.35 else "dim"
+            color = (
+                "red"
+                if r.normalized_score >= 0.65
+                else "yellow"
+                if r.normalized_score >= 0.35
+                else "dim"
+            )
             ptable.add_row(
                 r.pattern_id,
                 r.category,

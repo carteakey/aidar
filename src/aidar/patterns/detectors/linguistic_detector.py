@@ -3,24 +3,31 @@ from __future__ import annotations
 import re
 import statistics
 
-from aidar.models.pattern import PatternDef
 from aidar.models.result import PatternResult
 from aidar.patterns.detectors.base import BaseDetector
 
 try:
     from wordfreq import zipf_frequency
+
     _WORDFREQ_AVAILABLE = True
 except ImportError:
     _WORDFREQ_AVAILABLE = False
 
-_CONTENT_WORD_RE = re.compile(r'\b[a-z]{4,}\b')
+_CONTENT_WORD_RE = re.compile(r"\b[a-z]{4,}\b")
 
 # Simple sentence splitter — handles ., !, ? followed by whitespace + capital
 _SENTENCE_RE = re.compile(r'(?<=[.!?])\s+(?=[A-Z"])')
 # Question detection
-_QUESTION_RE = re.compile(r'\?')
+_QUESTION_RE = re.compile(r"\?")
 # Sentence-ending question
-_QUESTION_SENTENCE_RE = re.compile(r'[^.!?]*\?')
+_QUESTION_SENTENCE_RE = re.compile(r"[^.!?]*\?")
+_WORD_RE = re.compile(r"[A-Za-z][A-Za-z'-]*")
+_FIRST_PERSON_RE = re.compile(r"\b(?:i|me|my|mine|myself|we|us|our|ours|ourselves)\b", re.IGNORECASE)
+_PASSIVE_RE = re.compile(
+    r"\b(?:am|is|are|was|were|be|been|being|get|gets|got|gotten)"
+    r"\s+(?:\w+\s+){0,2}(?:[a-z]{3,}(?:ed|en)|written|known|seen|made|given|taken)\b",
+    re.IGNORECASE,
+)
 
 
 def _split_sentences(text: str) -> list[str]:
@@ -45,6 +52,18 @@ class LinguisticDetector(BaseDetector):
             return self._avg_sentence_length(text)
         elif metric == "word_freq_variance":
             return self._word_freq_variance(text)
+        elif metric == "passive_voice_rate":
+            return self._passive_voice_rate(text)
+        elif metric == "first_person_rate":
+            return self._first_person_rate(text, word_count)
+        elif metric == "named_entity_sparsity":
+            return self._named_entity_sparsity(text, word_count)
+        elif metric == "vocabulary_mismatch":
+            return self._vocabulary_mismatch(text)
+        elif metric == "local_repetition":
+            return self._local_repetition(text)
+        elif metric == "paragraph_duplication":
+            return self._paragraph_duplication(text)
         else:
             raise ValueError(f"Unknown linguistic metric: {metric}")
 
@@ -68,7 +87,7 @@ class LinguisticDetector(BaseDetector):
 
         # Invert: low CV (uniform) → high AI score
         inverted = max(0.0, 1.0 - cv)
-        return self._make_result(inverted, f"CV={cv:.2f} (burstiness={1-inverted:.2f})")
+        return self._make_result(inverted, f"CV={cv:.2f} (burstiness={1 - inverted:.2f})")
 
     def _type_token_ratio(self, text: str, word_count: int) -> PatternResult:
         """
@@ -84,7 +103,7 @@ class LinguisticDetector(BaseDetector):
         window = 50
         ttrs = []
         for i in range(0, len(words) - window + 1, window // 2):
-            chunk = words[i:i + window]
+            chunk = words[i : i + window]
             ttrs.append(len(set(chunk)) / len(chunk))
 
         avg_ttr = statistics.mean(ttrs) if ttrs else len(set(words)) / len(words)
@@ -110,14 +129,18 @@ class LinguisticDetector(BaseDetector):
         rate = questions / len(sentences)
 
         # Invert: low question rate → high score
-        inverted = max(0.0, 1.0 - (rate / max(self.pattern.params.get("threshold_high", 0.08), 0.001)))
+        inverted = max(
+            0.0, 1.0 - (rate / max(self.pattern.params.get("threshold_high", 0.08), 0.001))
+        )
         inverted = min(1.0, inverted)
 
         # Apply score cap — 0% questions is ambiguous for technical content
         cap = float(self.pattern.params.get("score_cap", 0.70))
         inverted = min(inverted, cap)
 
-        return self._make_result(inverted, f"{questions}/{len(sentences)} sentences are questions ({rate:.1%})")
+        return self._make_result(
+            inverted, f"{questions}/{len(sentences)} sentences are questions ({rate:.1%})"
+        )
 
     def _avg_sentence_length(self, text: str) -> PatternResult:
         """
@@ -202,3 +225,99 @@ class LinguisticDetector(BaseDetector):
             pattern_version=self.pattern.version,
             pattern_hash=self.pattern_hash,
         )
+
+    def _passive_voice_rate(self, text: str) -> PatternResult:
+        """Estimate passive constructions per 100 sentences.
+
+        This deliberately uses a bounded POS-free heuristic.  It is useful as
+        a review signal, not as a grammatical parser or authorship verdict.
+        """
+        sentences = _split_sentences(text)
+        if not sentences:
+            return self._make_result(0.0, "no sentences")
+        matches = len(_PASSIVE_RE.findall(text))
+        raw = matches / len(sentences) * float(self.pattern.params.get("per_n_sentences", 100))
+        return self._make_result(raw, f"{matches}/{len(sentences)} sentences ({raw:.1f} per 100)")
+
+    def _first_person_rate(self, text: str, word_count: int) -> PatternResult:
+        """Estimate first-person sparsity per N words (low usage scores higher)."""
+        per_n = float(self.pattern.params.get("per_n_words", 100))
+        count = len(_FIRST_PERSON_RE.findall(text))
+        rate = count / max(word_count, 1) * per_n
+        max_rate = float(self.pattern.params.get("max_rate", 10.0))
+        raw = max(0.0, max_rate - rate)
+        return self._make_result(raw, f"{rate:.2f} first-person per {int(per_n)} words ({count} matches)")
+
+    def _named_entity_sparsity(self, text: str, word_count: int) -> PatternResult:
+        """Estimate missing named entities from capitalized tokens and dates.
+
+        Sentence-initial capitals are excluded where possible; this remains a
+        lightweight English-oriented proxy and is intentionally labeled as such.
+        """
+        tokens = _WORD_RE.findall(text)
+        if len(tokens) < 20:
+            return self._make_result(0.0, "too few words for entity estimate")
+        candidates = 0
+        # Count capitalized words that are not sentence starts, plus dates and
+        # four-digit years.  Stopwords avoid inflating normal title case.
+        stop = {"The", "This", "That", "These", "Those", "A", "An", "And", "But", "For", "From"}
+        for token in tokens:
+            if token in stop:
+                continue
+            if token[:1].isupper() or re.fullmatch(r"\d{4}", token):
+                candidates += 1
+        density = candidates / max(len(tokens), 1)
+        # Low entity density is the AI-like signal; raw is sparsity.
+        sparsity = max(0.0, min(1.0, 1.0 - density / float(self.pattern.params.get("density_scale", 0.12))))
+        return self._make_result(sparsity, f"{candidates} entity-like tokens / {len(tokens)} words")
+
+    def _vocabulary_mismatch(self, text: str) -> PatternResult:
+        """Measure lexical register shifts between document chunks.
+
+        Mean content-token length is a dependency-free proxy for abrupt register
+        changes.  It intentionally returns zero for short or single-register text.
+        """
+        tokens = [token.lower() for token in _WORD_RE.findall(text) if len(token) >= 4]
+        if len(tokens) < 60:
+            return self._make_result(0.0, "too few words for register comparison")
+        chunks = [tokens[i : i + max(len(tokens) // 3, 1)] for i in range(0, len(tokens), max(len(tokens) // 3, 1))]
+        chunks = [chunk for chunk in chunks if len(chunk) >= 10]
+        means = [statistics.fmean(len(token) for token in chunk) for chunk in chunks]
+        if len(means) < 2:
+            return self._make_result(0.0, "too few chunks")
+        mismatch = (max(means) - min(means)) / max(statistics.fmean(means), 1.0)
+        return self._make_result(mismatch, f"chunk mean-length range={mismatch:.2f}")
+
+    def _local_repetition(self, text: str) -> PatternResult:
+        """Find near-duplicate sentences within a small local window."""
+        sentences = _split_sentences(text)
+        if len(sentences) < 4:
+            return self._make_result(0.0, "too few sentences")
+        normalized = [tuple(token.lower() for token in _WORD_RE.findall(sentence)) for sentence in sentences]
+        repeated = 0
+        window = int(self.pattern.params.get("window", 3))
+        threshold = float(self.pattern.params.get("similarity", 0.8))
+        for index, current in enumerate(normalized):
+            if len(current) < 4:
+                continue
+            current_set = set(current)
+            for prior in normalized[max(0, index - window) : index]:
+                if len(prior) < 4:
+                    continue
+                prior_set = set(prior)
+                similarity = len(current_set & prior_set) / max(len(current_set | prior_set), 1)
+                if similarity >= threshold:
+                    repeated += 1
+                    break
+        raw = repeated / len(sentences) * 100.0
+        return self._make_result(raw, f"{repeated}/{len(sentences)} locally repeated sentences")
+
+    def _paragraph_duplication(self, text: str) -> PatternResult:
+        """Detect verbatim duplicate paragraphs using normalized fingerprints."""
+        paragraphs = [p for p in re.split(r"\n\s*\n", text) if len(_WORD_RE.findall(p)) >= 5]
+        if len(paragraphs) < 3:
+            return self._make_result(0.0, "too few paragraphs")
+        fingerprints = [" ".join(_WORD_RE.findall(p.lower())) for p in paragraphs]
+        duplicate_count = len(fingerprints) - len(set(fingerprints))
+        raw = duplicate_count / len(fingerprints) * 100.0
+        return self._make_result(raw, f"{duplicate_count}/{len(fingerprints)} duplicate paragraphs")
