@@ -1,0 +1,30 @@
+id: negative_parallelism_plain
+version: 1
+name: Negative Parallelism (plain contrast)
+description: >
+  The plain within-sentence contrast "not X, but Y" / "not just X, but Y".
+  Split out of negative_parallelism (v2) because it is routine human rhetoric:
+  humanizer v4.0.0 section 1 — "Keep a contrast only when the negative half
+  corrects a belief the reader actually holds, or when both halves carry
+  information" — and the plain form is the one humans use for such legitimate
+  corrections, while the tell is the staging (the cross-sentence reframe,
+  which stays in negative_parallelism at weight 0.90). Demoted to a weak
+  signal: weight 0.30 (was 0.90 for the combined set) and thresholds raised
+  so a couple of ordinary contrasts per 1000 words score zero and only
+  saturation scores.
+category: tropes
+weight: 0.30
+detection_type: regex
+severity: low
+references:
+  - https://tropes.fyi
+  - https://github.com/blader/humanizer (v4.0.0, MIT)
+params:
+  patterns:
+    # "Not X, but Y" (generic; tightened to avoid false positives)
+    # Matches: "Not merely a tool, but a platform."
+    - '\bnot (?:just|merely|simply|only)?\s*[^.,:;—–\n]{1,60}[.,:;—–]\s*but (?:rather|instead|also)?\s*\b'
+
+  per_n_words: 1000
+  threshold_low: 2.0   # ordinary legitimate contrasts stay at 0 (humanizer: keep a contrast that corrects a belief)
+  threshold_high: 8.0
