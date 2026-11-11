@@ -54,7 +54,7 @@ def aidar(ctx: click.Context, patterns_dir: str | None, output: str) -> None:
     weights = load_weight_config(resolved)
 
     registry = PatternRegistry(patterns)
-    analyzer = Analyzer(registry)
+    analyzer = Analyzer(registry, aggregation=weights.aggregation, cluster=weights.cluster)
 
     ctx.obj["analyzer"] = analyzer
     ctx.obj["registry"] = registry
