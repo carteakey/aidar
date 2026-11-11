@@ -196,7 +196,7 @@ def test_moved_terms_are_gone(registry: PatternRegistry) -> None:
                  "it's worth noting"):
         assert gone not in tropes.params["terms"], f"'{gone}' still in ai_writing_tropes"
     fillers = {p.id: p for p in registry.all_patterns()}["filler_openers"]
-    assert fillers.version == 2
+    assert fillers.version == 3  # T4b: v2 (T5 term move) + word_boundary switch combined per supervisor
     for gone in ("in conclusion", "to sum up", "in summary", "to wrap up",
                  "wrapping up", "in closing", "to conclude"):
         assert gone not in fillers.params["terms"], f"'{gone}' still in filler_openers"
