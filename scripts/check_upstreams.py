@@ -7,6 +7,16 @@ Read-only: prints what changed and how to refresh; never edits files.
     python scripts/check_upstreams.py --strict    # exit 1 if anything drifted
                                                   # or the manifest disagrees
                                                   # with the pattern files
+    python scripts/check_upstreams.py --verify-citations
+                                                  # resolve every kind: paper
+                                                  # entry (arXiv id -> title
+                                                  # via the export API, DOI ->
+                                                  # Crossref) and require every
+                                                  # pattern reference to be
+                                                  # tracked; exit 1 on failure.
+                                                  # Prints each title so a
+                                                  # human can eyeball
+                                                  # relevance.
 
 Standard library only. Uses GITHUB_TOKEN if set (unauthenticated GitHub API
 allows 60 req/hour). Wikipedia pins are checked against the MediaWiki API.
@@ -23,8 +33,10 @@ import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -143,15 +155,28 @@ def reference_maps_to(ref: str, source: dict) -> bool:
 
 # ---------------------------------------------------------------- network --
 
-def http_json(url: str, token: str | None) -> dict:
-    headers = {"Accept": "application/vnd.github+json", "User-Agent": "aidar-check-upstreams"}
-    # Only GitHub's API understands a GitHub token; sending it elsewhere
-    # (MediaWiki) causes a 401.
-    if token and urllib.parse.urlsplit(url).hostname == "api.github.com":
-        headers["Authorization"] = f"Bearer {token}"
+def http_get(url: str, token: str | None) -> bytes:
+    headers = {"User-Agent": "aidar-check-upstreams"}
+    host = urllib.parse.urlsplit(url).hostname
+    # GitHub's content type on GitHub only: Crossref 406s on an unexpected
+    # Accept, and no other host here content-negotiates. Only GitHub's API
+    # understands a GitHub token; sending it elsewhere (MediaWiki, Crossref)
+    # causes a 401.
+    if host == "api.github.com":
+        headers["Accept"] = "application/vnd.github+json"
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=TIMEOUT) as res:
-        return json.loads(res.read().decode())
+        return res.read()
+
+
+def http_json(url: str, token: str | None) -> dict:
+    return json.loads(http_get(url, token).decode())
+
+
+def http_text(url: str, token: str | None) -> str:
+    return http_get(url, token).decode("utf-8", "replace")
 
 
 def version_parts(tag: str, prefix: str) -> list:
@@ -217,6 +242,43 @@ def _ts(value: str):
     return value.replace("Z", "+00:00")
 
 
+# ------------------------------------------------------- citation verify --
+
+ATOM_NS = "{http://www.w3.org/2005/Atom}"
+
+
+def resolve_paper(source: dict, token: str | None) -> tuple[bool, str]:
+    """Return (ok, title-or-error) for a kind: paper source.
+
+    arXiv locators resolve through the export API, DOIs through Crossref.
+    Only existence and title are checked here — whether the title actually
+    matches the pattern's signal is a human judgment call; the checker just
+    prints the title for eyeballing.
+    """
+    locator = str(source.get("locator", ""))
+    scheme, _, value = locator.partition(":")
+    scheme, value = scheme.lower(), value.strip()
+    if scheme == "arxiv":
+        xml = http_text(f"https://export.arxiv.org/api/query?id_list={urllib.parse.quote(value)}", token)
+        entries = ET.fromstring(xml).findall(ATOM_NS + "entry")
+        if not entries:
+            return False, "arXiv returned no entry"
+        title = " ".join((entries[0].findtext(ATOM_NS + "title") or "").split())
+        if not title or title.lower() == "error":
+            return False, "arXiv has no record for this id"
+        return True, title
+    if scheme == "doi":
+        try:
+            data = http_json(f"https://api.crossref.org/works/{urllib.parse.quote(value)}", token)
+        except urllib.error.HTTPError as err:
+            return False, f"Crossref HTTP {err.code}"
+        titles = data.get("message", {}).get("title") or []
+        if not titles:
+            return False, "Crossref record has no title"
+        return True, titles[0]
+    return False, f"unsupported paper locator {locator!r}"
+
+
 # ------------------------------------------------------------------ main --
 
 def main() -> int:
@@ -224,6 +286,9 @@ def main() -> int:
     ap.add_argument("--manifest", type=Path, default=ROOT / "sources.yaml")
     ap.add_argument("--patterns-dir", type=Path, default=ROOT / "patterns")
     ap.add_argument("--strict", action="store_true", help="exit 1 on drift or manifest/pattern mismatch")
+    ap.add_argument("--verify-citations", action="store_true",
+                    help="resolve every kind: paper source (arXiv export API / Crossref) and require every "
+                         "pattern reference to be tracked; exit 1 on failure")
     args = ap.parse_args()
 
     token = os.environ.get("GITHUB_TOKEN")
@@ -260,6 +325,18 @@ def main() -> int:
         print(f"manifest ok: {len(refs)} patterns cross-checked against {len(sources)} sources")
 
     for src in sources:
+        if args.verify_citations:
+            # Citation-verify mode: papers only, no drift checks.
+            if src["kind"] == "paper":
+                ok, title = resolve_paper(src, token)
+                if ok:
+                    print(f'ok     paper {src["id"]}: "{title}"')
+                    if src.get("url"):
+                        print(f"       {src['url']}")
+                else:
+                    failed += 1
+                    print(f"FAIL   paper {src['id']}: {title}")
+            continue
         if src.get("pinned") is None:
             print(f"unpinned {src['id']}: {src['kind']}, citation only")
             continue
@@ -279,7 +356,11 @@ def main() -> int:
         else:
             print(f"ok     {src['id']}: {src['pinned']}")
 
+    papers = sum(1 for s in sources if s["kind"] == "paper")
     checked = sum(1 for s in sources if s.get("pinned") is not None)
+    if args.verify_citations:
+        print(f"\ncitations: {len(sources)} sources, {papers} papers checked, {failed} unresolved.")
+        return 1 if failed else 0
     print(f"\n{len(sources)} sources, {checked} pinned, {drifted} drifted, "
           f"{failed} manifest errors, {unchecked} unchecked.")
     if args.strict and (drifted or failed):

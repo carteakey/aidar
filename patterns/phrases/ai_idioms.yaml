@@ -11,7 +11,7 @@ weight: 0.85
 detection_type: frequency
 severity: high
 references:
-  - https://arxiv.org/abs/2403.05821
+  - https://arxiv.org/abs/2412.11385
 params:
   terms:
     - "delve into"

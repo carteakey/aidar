@@ -16,7 +16,7 @@ and reports drift (a scheduled workflow runs it monthly and files an issue on
 change).
 
 The trope lists are derived from [tropes.fyi](https://tropes.fyi) — "AI
-Writing Tropes to Avoid" and the writing-whip skill by Ossama Chaib, both
+Writing Tropes to Avoid" by Ossama Chaib,
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — and pattern
 phrasing draws on Wikipedia's ["Signs of AI writing"](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)
 (CC BY-SA 4.0). Other citations: [marginalia.nu's HN em-dash analysis](https://www.marginalia.nu/weird-ai-crap/hn/),
@@ -24,9 +24,10 @@ phrasing draws on Wikipedia's ["Signs of AI writing"](https://en.wikipedia.org/w
 (PNAS 2025) — GPT-4o's second-most-overused word is "tapestry"; present
 participles alone are a near-sufficient classifier — and
 [LLM writing style resources](https://www.refsmmat.com/notebooks/llm-style.html)
-by Alex Reinhart. See `sources.yaml` for the full list, including the
-upstream skill repos (blader/humanizer, oaustegard/claude-skills declauding)
-whose guidance informs the pattern set.
+by Alex Reinhart. `sources.yaml` also tracks works consulted as references —
+the writing-whip skill (Ossama Chaib), blader/humanizer and
+oaustegard/claude-skills' declauding — which no current pattern derives from
+but which are checked for drift alongside everything else.
 
 ## What it does
 

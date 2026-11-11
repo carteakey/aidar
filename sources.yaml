@@ -119,17 +119,7 @@ sources:
     license: All rights reserved (citation only)
     derived_patterns:
       - sentence_burstiness
-
-  - id: arxiv-burstiness-citation
-    name: "Randomly stacked open-cylindrical shells as a functional mechanical device"
-    kind: paper
-    locator: arXiv:2301.07867
-    url: https://arxiv.org/abs/2301.07867
-    pinned: null
-    license: All rights reserved (citation only)
-    derived_patterns:
-      - sentence_burstiness
-    notes: Cited by patterns/structure/sentence_burstiness.yaml, but the paper is mechanical engineering and unrelated to text burstiness — appears to be a citation error in the pattern YAML.
+    notes: The only remaining citation for sentence_burstiness — arXiv:2301.07867 was removed on 2026-11-11 (a mechanical-engineering paper, verified via arXiv API); no academic replacement was found whose title or abstract supports the sentence-length-variation signal (DetectGPT arXiv:2301.11305 was checked and rejected — its abstract is about probability curvature, not burstiness).
 
   - id: arxiv-detectgpt
     name: "DetectGPT: Zero-Shot Machine-Generated Text Detection using Probability Curvature"
@@ -141,27 +131,27 @@ sources:
     derived_patterns:
       - word_freq_variance
 
-  - id: arxiv-ai-idioms-citation
-    name: "Optimizing LLM Queries in Relational Data Analytics Workloads"
+  - id: arxiv-delve-lexical-overrepresentation
+    name: 'Why Does ChatGPT "Delve" So Much? Exploring the Sources of Lexical Overrepresentation in Large Language Models'
     kind: paper
-    locator: arXiv:2403.05821
-    url: https://arxiv.org/abs/2403.05821
+    locator: arXiv:2412.11385
+    url: https://arxiv.org/abs/2412.11385
     pinned: null
     license: All rights reserved (citation only)
     derived_patterns:
       - ai_idioms
-    notes: Cited by patterns/phrases/ai_idioms.yaml, but the paper is about database query optimization — appears to be a citation error in the pattern YAML.
+    notes: Replaces arXiv:2403.05821 (a database paper) as ai_idioms citation on 2026-11-11; title and abstract verified via the arXiv export API — the paper identifies 21 focal words ("delve", "intricate", "underscore") overrepresented in LLM output, matching the pattern's signal.
 
-  - id: jql-type-token-ratio
-    name: Journal of Quantitative Linguistics article on type-token ratio (as cited)
+  - id: mattr-lexical-diversity
+    name: 'Estimating lexical diversity using the moving average type-token ratio (MATTR): Pros and cons (Research Methods in Applied Linguistics, 2025)'
     kind: paper
-    locator: doi:10.1080/09296174.1990.10820076
-    url: https://www.tandfonline.com/doi/abs/10.1080/09296174.1990.10820076
+    locator: doi:10.1016/j.rmal.2024.100168
+    url: https://doi.org/10.1016/j.rmal.2024.100168
     pinned: null
     license: All rights reserved (citation only)
     derived_patterns:
       - type_token_ratio
-    notes: DOI does not resolve in Crossref and JQL only exists since 1994 — the citation in patterns/vocabulary/type_token_ratio.yaml may be wrong.
+    notes: Replaces doi:10.1080/09296174.1990.10820076 (unresolvable in Crossref) on 2026-11-11; verified via Crossref API — title matches the pattern's sliding-window STTR method (MATTR).
 
   - id: wordfreq
     name: rspeer/wordfreq (word frequency library)
@@ -172,12 +162,8 @@ sources:
     derived_patterns:
       - word_freq_variance
 
-  - id: hn-second-person-comment
-    name: Hacker News comment #47279741 (second-person address)
-    kind: web
-    locator: https://news.ycombinator.com/item?id=47279741
-    pinned: null
-    license: All rights reserved (citation only)
-    derived_patterns:
-      - second_person_address
-    notes: The comment is a sandboxing question in an unrelated Show HN thread — appears to be a citation error in patterns/phrases/second_person_address.yaml.
+  # second_person_address carries no citations since 2026-11-11: its old HN
+  # comment reference (47279741) was an unrelated Show HN thread (verified via
+  # the HN API), and no on-point replacement was found via the HN Algolia
+  # search API. The pattern stands on its own terms list until a real source
+  # is found.
