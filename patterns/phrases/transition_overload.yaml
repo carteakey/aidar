@@ -21,8 +21,8 @@ weight: 0.35
 detection_type: frequency
 severity: low
 references:
-  - https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing (revision 1384930421)
-  - https://github.com/blader/humanizer (v4.0.0, MIT)
+  - https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+  - https://github.com/blader/humanizer
 params:
   terms:
     - "additionally"

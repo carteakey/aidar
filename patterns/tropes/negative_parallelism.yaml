@@ -20,8 +20,8 @@ detection_type: regex
 severity: high
 references:
   - https://tropes.fyi
-  - https://github.com/blader/humanizer (v4.0.0, MIT)
-  - https://github.com/oaustegard/claude-skills/tree/main/declauding (v0.14.0, MIT)
+  - https://github.com/blader/humanizer
+  - https://github.com/oaustegard/claude-skills/tree/main/declauding
 params:
   patterns:
     # "It's not X [punctuation] It's Y" or "Something isn't X. It's Y."

@@ -30,6 +30,7 @@ sources:
       - ai_section_headers
       - bold_first_bullets
       - negative_parallelism
+      - negative_parallelism_plain
       - ai_word_choice_tropes
       - unicode_arrows
       - compulsive_counting
@@ -53,7 +54,12 @@ sources:
     url: https://github.com/blader/humanizer
     pinned: v4.0.0
     license: MIT
-    derived_patterns: []
+    derived_patterns:
+      - hedging_phrases
+      - transition_overload
+      - ai_idioms
+      - negative_parallelism
+      - negative_parallelism_plain
 
   - id: declauding
     name: oaustegard/claude-skills declauding
@@ -70,6 +76,9 @@ sources:
       - spec_ese
       - aphoristic_closer
       - retroactive_significance
+      - hedging_phrases
+      - ai_idioms
+      - negative_parallelism
 
   - id: wikipedia-signs-of-ai-writing
     name: Wikipedia "Signs of AI writing"
@@ -86,6 +95,8 @@ sources:
       - llm_reference_artifacts
       - challenges_future_template
       - ai_section_headers
+      - ai_idioms
+      - transition_overload
 
   - id: marginalia-hn-em-dash
     name: New accounts on Hacker News ten times more likely to use em-dashes (marginalia.nu)

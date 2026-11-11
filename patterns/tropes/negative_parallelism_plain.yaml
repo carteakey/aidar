@@ -18,7 +18,7 @@ detection_type: regex
 severity: low
 references:
   - https://tropes.fyi
-  - https://github.com/blader/humanizer (v4.0.0, MIT)
+  - https://github.com/blader/humanizer
 params:
   patterns:
     # "Not X, but Y" (generic; tightened to avoid false positives)

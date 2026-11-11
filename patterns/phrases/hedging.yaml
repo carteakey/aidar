@@ -20,8 +20,8 @@ weight: 0.90
 detection_type: frequency
 severity: high
 references:
-  - https://github.com/blader/humanizer (v4.0.0, MIT)
-  - https://github.com/oaustegard/claude-skills/tree/main/declauding (v0.14.0, MIT)
+  - https://github.com/blader/humanizer
+  - https://github.com/oaustegard/claude-skills/tree/main/declauding
 params:
   terms:
     - "it's worth noting"
