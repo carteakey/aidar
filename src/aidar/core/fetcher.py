@@ -28,8 +28,9 @@ _MD_TABLE_PIPE_RE = re.compile(r"\|")
 
 # Trafilatura marks list items with "- " only, so a line-initial "*" is always
 # emphasis ("**Note:** ..."), never a bullet — but it would count as one in
-# bullet_density. Strip the leading markers, keep inline ones.
-_MD_LEADING_ASTERISK_RE = re.compile(r"(?m)^(\s*)\*+(?=\S)")
+# bullet_density. Strip the whole leading emphasis span (opening and matching
+# closing marker); inline emphasis later in the line is untouched.
+_MD_LEADING_EMPHASIS_RE = re.compile(r"(?m)^(\s*)(\*{1,3})(\S[^*\n]*?)\2")
 
 
 def _clean_markdown(text: str) -> str:
@@ -40,7 +41,7 @@ def _clean_markdown(text: str) -> str:
         for line in text.splitlines()
         if not (line.strip() and set(line.strip()) <= _MD_PUNCT_CHARS)
     ]
-    return _MD_LEADING_ASTERISK_RE.sub(r"\1", "\n".join(lines))
+    return _MD_LEADING_EMPHASIS_RE.sub(r"\1\3", "\n".join(lines))
 
 
 def count_markdown_words(text: str) -> int:

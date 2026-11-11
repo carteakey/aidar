@@ -87,8 +87,17 @@ def test_paragraph_initial_bold_is_not_a_bullet() -> None:
     # line-initial "*" is emphasis, never a list marker ("- " is used for lists)
     cleaned = _clean_markdown("**Note:** this is a paragraph, not a list item.\n\n- real bullet\n")
     assert not cleaned.splitlines()[0].startswith("*")  # cannot mimic a bullet line
-    assert cleaned.splitlines()[0].startswith("Note:")
+    assert cleaned.splitlines()[0] == "Note: this is a paragraph, not a list item."
+    assert "**" not in cleaned  # no orphan closing marker left behind
     assert "- real bullet" in cleaned  # real list markers untouched
+
+
+def test_leading_emphasis_span_is_stripped_with_closing_marker() -> None:
+    assert _clean_markdown("**Note:** x") == "Note: x"
+    assert _clean_markdown("*italic start* here") == "italic start here"
+    # real bullets and mid-line emphasis are untouched
+    assert _clean_markdown("- **Security**: x") == "- **Security**: x"
+    assert _clean_markdown("a **b** c") == "a **b** c"
 
 
 def test_raw_html_passthrough(extracted) -> None:
