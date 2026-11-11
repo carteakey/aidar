@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from aidar.models.config import WeightConfig
+from aidar.models.config import ClusterParams, WeightConfig
 from aidar.models.pattern import PatternDef
 
 
@@ -45,6 +45,7 @@ def load_weight_config(patterns_dir: Path) -> WeightConfig:
 
     data = _load_yaml(weights_file)
     weights_data = data.get("weights", {})
+    cluster_data = data.get("cluster") or {}
     config = WeightConfig(
         tropes=float(weights_data.get("tropes", 0.40)),
         phrases=float(weights_data.get("phrases", 0.20)),
@@ -52,6 +53,12 @@ def load_weight_config(patterns_dir: Path) -> WeightConfig:
         structure=float(weights_data.get("structure", 0.10)),
         vocabulary=float(weights_data.get("vocabulary", 0.10)),
         emoji=float(weights_data.get("emoji", 0.05)),
+        aggregation=str(data.get("aggregation", "mean")),
+        cluster=ClusterParams(
+            firing_threshold=float(cluster_data.get("firing_threshold", 0.30)),
+            scale=float(cluster_data.get("scale", 0.15)),
+            k=int(cluster_data.get("k", 3)),
+        ),
     )
     config.validate()
     return config
