@@ -30,6 +30,19 @@ def test_load_manifest_parses_the_real_sources_yaml():
         "bold_first_bullets",
         "negative_parallelism",
         "ai_word_choice_tropes",
+        "unicode_arrows",
+        "compulsive_counting",
+        "listicle_trenchcoat",
+        "rhetorical_qa",
+        "signposted_conclusion",
+    ]
+    assert by_id["declauding"]["derived_patterns"] == [
+        "juridical_register",
+        "verification_provenance",
+        "self_grading",
+        "spec_ese",
+        "aphoristic_closer",
+        "retroactive_significance",
     ]
     assert by_id["declauding"]["tag_prefix"] == "declauding-v"
     assert by_id["wikipedia-signs-of-ai-writing"]["pinned"] == "1384930421"  # stays a string

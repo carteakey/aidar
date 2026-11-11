@@ -31,6 +31,11 @@ sources:
       - bold_first_bullets
       - negative_parallelism
       - ai_word_choice_tropes
+      - unicode_arrows
+      - compulsive_counting
+      - listicle_trenchcoat
+      - rhetorical_qa
+      - signposted_conclusion
 
   - id: writing-whip
     name: writing-whip skill (Ossama Chaib, tropes.fyi)
@@ -58,7 +63,13 @@ sources:
     url: https://github.com/oaustegard/claude-skills
     pinned: declauding-v0.14.0
     license: MIT
-    derived_patterns: []
+    derived_patterns:
+      - juridical_register
+      - verification_provenance
+      - self_grading
+      - spec_ese
+      - aphoristic_closer
+      - retroactive_significance
 
   - id: wikipedia-signs-of-ai-writing
     name: Wikipedia "Signs of AI writing"
