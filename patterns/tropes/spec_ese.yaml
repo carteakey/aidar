@@ -1,0 +1,38 @@
+id: spec_ese
+version: 1
+name: Spec-ese
+description: >
+  Specification-language tics for ordinary program behaviour: demonstrative
+  subjects re-naming a thing ("That session..."), reflexive emphasis
+  ("does not itself"), latinate state verbs ("idles awaiting", "holds no
+  credentials"). Ported from declauding's spec-ese category (MIT, Oskar
+  Austegard); never fired on the human posts of the labelled corpus.
+category: tropes
+weight: 0.20
+detection_type: regex
+severity: low
+references:
+  - https://github.com/oaustegard/claude-skills/tree/main/declauding
+params:
+  patterns:
+    # Sentence-initial "That child/session/process/container/job/worker/request/instance/delegate ..."
+    - '(?:^|[.!?]\s+)That\s+(?:child|session|process|container|job|worker|request|instance|delegate)\b(?!''s)'
+
+    # "does not itself"
+    - '\bdoes\s+not\s+itself\b'
+
+    # "idles/sits/waits awaiting"
+    - '\b(?:idles?|sits?|waits?)\s+awaiting\b'
+
+    # "awaiting input / awaiting instructions / awaiting a response"
+    - '\bawaiting\s+(?:input|instructions|a\s+\w+|the\s+\w+)\b'
+
+    # "holds/carries/comprises/obtains no X"
+    - '\b(?:holds|carries|comprises|obtains)\s+no\s+\w+'
+
+    # "never carries a ..."
+    - '\bnever\s+carries\s+a\b'
+
+  per_n_words: 1000
+  threshold_low: 0.3
+  threshold_high: 1.5

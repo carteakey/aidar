@@ -1,0 +1,24 @@
+id: listicle_trenchcoat
+version: 1
+name: Listicle in a Trench Coat
+description: >
+  Numbered points dressed up as continuous prose: paragraphs that open
+  "The first...", "The second...", "My third..." are a listicle wearing a
+  paragraph costume. Supersedes the fixed "the first reason"-style term list
+  formerly in ai_writing_tropes.yaml (moved, not duplicated) by matching the
+  shape at any paragraph start with any noun.
+category: tropes
+weight: 0.40
+detection_type: regex
+severity: medium
+references:
+  - https://tropes.fyi/directory
+params:
+  patterns:
+    # Paragraph-initial ordinal: "The first reason is...", "My second point..."
+    # (?m) because the regex detector compiles without re.MULTILINE.
+    - '(?m)^\s*(?:the|my)\s+(?:first|second|third|fourth|fifth)\s+\w+'
+
+  per_n_words: 1000
+  threshold_low: 0.3
+  threshold_high: 2.0

@@ -1,14 +1,18 @@
 id: ai_writing_tropes
-version: 3
+version: 4
 name: AI Writing Tropes
 description: >
   Structural, tonal, and compositional patterns that are the strongest signals of
   AI-generated text, sourced from tropes.fyi. These are NOT word-choice patterns
   (those live in vocabulary/ and phrases/) — they are sentence-level and
   paragraph-level habits: manufactured drama, rhetorical hand-holding, fake
-  vulnerability, negative parallelism, anaphora, signposted conclusions, and the
+  vulnerability, negative parallelism, anaphora, and the
   "despite its challenges" formula. Human writers occasionally use any one of
   these; AI uses many of them together throughout a single piece.
+  v4: rhetorical Q&A, unicode arrows, signposted conclusion, listicle-in-a-
+  trench-coat and "it's worth noting" terms moved to dedicated patterns
+  (rhetorical_qa, unicode_arrows, signposted_conclusion, listicle_trenchcoat,
+  self_grading).
 category: tropes
 weight: 0.95
 detection_type: frequency
@@ -39,26 +43,12 @@ params:
     - "not randomly"
 
     # ── Sentence Structure: Rhetorical Q&A ("The X? A Y.") ───────────────────
-    # Self-posed questions answered immediately for dramatic effect. The model
-    # asks a question nobody was asking, then answers it.
-    - "the result?"
-    - "the worst part?"
-    - "the scary part?"
-    - "the catch?"
-    - "the problem?"
-    - "the twist?"
-    - "the irony?"
-    - "the kicker?"
-    - "the best part?"
-    - "the real question?"
-    - "the answer?"
-    - "the solution?"
-    - "the difference?"
-    - "the lesson?"
+    # Moved to rhetorical_qa.yaml (v4): the dedicated regex matches the whole
+    # question-and-immediate-answer shape instead of bare question fragments.
 
     # ── Sentence Structure: Filler Transitions ────────────────────────────────
     # Phrases that signal nothing and introduce new points without connecting them.
-    - "it's worth noting"
+    # ("it's worth noting" moved to self_grading.yaml.)
     - "it bears mentioning"
     - "it should be noted that"
     - "notably,"
@@ -109,12 +99,8 @@ params:
     - "—"
 
     # ── Formatting: Unicode Decoration ────────────────────────────────────────
-    # Unicode arrows and special characters that real writers typing in a text
-    # editor don't produce. Counts each occurrence.
-    - "→"
-    - "←"
-    - "⟹"
-    - "⟶"
+    # Moved to unicode_arrows.yaml (v4): the dedicated regex counts all arrow
+    # glyphs (→ ⇒ ➜ ⟹ ⟶ ←) with its own thresholds.
 
     # ── Tone: "Here's the Kicker" ─────────────────────────────────────────────
     # False suspense transitions that promise a revelation but deliver a point
@@ -239,15 +225,7 @@ params:
     - "knowledge decay"
 
     # ── Composition: Signposted Conclusion ────────────────────────────────────
-    # Explicitly announcing the conclusion. Competent writing doesn't need to
-    # tell you it's concluding — the reader can feel it.
-    - "in conclusion,"
-    - "to sum up,"
-    - "in summary,"
-    - "to summarize,"
-    - "wrapping up,"
-    - "to wrap up,"
-    - "in closing,"
+    # Moved to signposted_conclusion.yaml (v4): dedicated regex, comma-or-not.
 
     # ── Composition: "Despite Its Challenges" Formula ─────────────────────────
     # Rigid formula where AI acknowledges problems only to immediately dismiss them.
@@ -288,29 +266,8 @@ params:
     - "this isn't just"
 
     # ── Composition: Listicle in a Trench Coat ────────────────────────────────
-    # Numbered or labeled points dressed up as continuous prose. What is
-    # essentially a listicle is wrapped in paragraphs starting "The first..."
-    # "The second..." to disguise the format.
-    - "the first wall"
-    - "the second wall"
-    - "the third wall"
-    - "the second takeaway"
-    - "the third takeaway"
-    - "the first step is"
-    - "the second step is"
-    - "the third step is"
-    - "the first reason"
-    - "the second reason"
-    - "the third reason"
-    - "the first factor"
-    - "the second factor"
-    - "the third factor"
-    - "the first pillar"
-    - "the second pillar"
-    - "the third pillar"
-    - "the first principle"
-    - "the second principle"
-    - "the third principle"
+    # Moved to listicle_trenchcoat.yaml (v4): the dedicated regex matches the
+    # paragraph-initial ordinal shape with any noun instead of fixed pairs.
 
     # ── Composition: Fractal Summaries ────────────────────────────────────────
     # "What I'm going to tell you; what I'm telling you; what I just told you"

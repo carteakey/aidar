@@ -1,0 +1,23 @@
+id: unicode_arrows
+version: 1
+name: Unicode Arrow Decoration
+description: >
+  Arrows (→, ⇒, ➜, ⟹, ⟶, ←) used as inline prose punctuation. Writers typing in
+  a text editor produce "->" or restructure the sentence; models reach for the
+  typographic glyphs. Strongest single separator measured on the labelled
+  corpus (0.04 vs 0.48 per 1000 words). Counts each occurrence.
+category: tropes
+weight: 0.60
+detection_type: regex
+severity: medium
+references:
+  - https://tropes.fyi/directory
+params:
+  patterns:
+    # Each arrow glyph counts as one hit. Supersedes the "Unicode Decoration"
+    # terms formerly in ai_writing_tropes.yaml (moved, not duplicated).
+    - '[→⇒➜⟹⟶←]'
+
+  per_n_words: 1000
+  threshold_low: 0.2
+  threshold_high: 1.5
