@@ -1,0 +1,183 @@
+# External sources aidar's patterns and README draw on.
+#
+# One entry per upstream. `pinned` is what this repo currently reflects; the
+# checker (scripts/check_upstreams.py) compares it against upstream and
+# reports drift. It never edits anything: merging an upstream change is a
+# judgment call — update `pinned` only after reviewing the new revision.
+#
+# kind:
+#   git-tag   - a repo with release tags; `tag_prefix` filters monorepo tags
+#   gist      - a GitHub gist; pinned is its `updated_at` timestamp
+#   wikipedia - a wiki page; pinned is its revision id (MediaWiki API)
+#   paper     - an academic paper (arXiv id / DOI); never drift-checked
+#   web       - a web page; never drift-checked
+#
+# derived_patterns: pattern ids in patterns/ whose `references:` field cites
+# this source. Credit-only sources (no pattern yet) carry an empty list.
+
+sources:
+  - id: tropes-fyi
+    name: tropes.fyi "AI Writing Tropes to Avoid" (Ossama Chaib)
+    kind: gist
+    locator: f3baa9d25154c33095e22272c631f5a1
+    url: https://tropes.fyi
+    pinned: 2026-11-09T20:14:42Z
+    license: CC BY 4.0
+    derived_patterns:
+      - ai_writing_tropes
+      - short_punchy_fragments
+      - tricolon_abuse
+      - ai_section_headers
+      - bold_first_bullets
+      - negative_parallelism
+      - ai_word_choice_tropes
+
+  - id: writing-whip
+    name: writing-whip skill (Ossama Chaib, tropes.fyi)
+    kind: gist
+    locator: dae6f9571534f3fbd1266a384be00e11
+    url: https://gist.github.com/ossa-ma/dae6f9571534f3fbd1266a384be00e11
+    pinned: 2026-11-10T23:43:58Z
+    license: CC BY 4.0
+    derived_patterns: []
+
+  - id: humanizer
+    name: blader/humanizer
+    kind: git-tag
+    locator: blader/humanizer
+    url: https://github.com/blader/humanizer
+    pinned: v4.0.0
+    license: MIT
+    derived_patterns: []
+
+  - id: declauding
+    name: oaustegard/claude-skills declauding
+    kind: git-tag
+    locator: oaustegard/claude-skills
+    tag_prefix: declauding-v
+    url: https://github.com/oaustegard/claude-skills
+    pinned: declauding-v0.14.0
+    license: MIT
+    derived_patterns: []
+
+  - id: wikipedia-signs-of-ai-writing
+    name: Wikipedia "Signs of AI writing"
+    kind: wikipedia
+    locator: "Wikipedia:Signs of AI writing"
+    url: https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+    pinned: "1384930421"
+    license: CC BY-SA 4.0
+    derived_patterns:
+      - llm_tracking_parameters
+      - notability_media_overattribution
+      - llm_placeholder_tokens
+      - llm_markup_artifacts
+      - llm_reference_artifacts
+      - challenges_future_template
+      - ai_section_headers
+
+  - id: marginalia-hn-em-dash
+    name: New accounts on Hacker News ten times more likely to use em-dashes (marginalia.nu)
+    kind: web
+    locator: https://www.marginalia.nu/weird-ai-crap/hn/
+    pinned: null
+    license: All rights reserved (citation only)
+    derived_patterns:
+      - em_dash_overuse
+
+  - id: refsmmat-llm-style
+    name: "LLM writing style: empirical stylometric study (Alex Reinhart, refsmmat.com)"
+    kind: web
+    locator: https://www.refsmmat.com/notebooks/llm-style.html
+    pinned: null
+    license: All rights reserved (citation only)
+    derived_patterns: []
+
+  - id: pnas-llm-writing-style
+    name: Do LLMs write like humans? Variation in grammatical and rhetorical styles (PNAS 2025)
+    kind: paper
+    locator: arXiv:2410.16107
+    url: https://arxiv.org/abs/2410.16107
+    pinned: null
+    license: All rights reserved (citation only)
+    derived_patterns: []
+
+  - id: arxiv-compressed-syntax
+    name: Why is AI-generated language so hard to understand? (cited by declauding)
+    kind: paper
+    locator: arXiv:2610.29162
+    url: https://arxiv.org/abs/2610.29162
+    pinned: null
+    license: All rights reserved (citation only)
+    derived_patterns: []
+
+  - id: gptzero-burstiness
+    name: GPTZero FAQ ("burstiness" metric)
+    kind: web
+    locator: https://gptzero.me/faq
+    pinned: null
+    license: All rights reserved (citation only)
+    derived_patterns:
+      - sentence_burstiness
+
+  - id: arxiv-burstiness-citation
+    name: "Randomly stacked open-cylindrical shells as a functional mechanical device"
+    kind: paper
+    locator: arXiv:2301.07867
+    url: https://arxiv.org/abs/2301.07867
+    pinned: null
+    license: All rights reserved (citation only)
+    derived_patterns:
+      - sentence_burstiness
+    notes: Cited by patterns/structure/sentence_burstiness.yaml, but the paper is mechanical engineering and unrelated to text burstiness — appears to be a citation error in the pattern YAML.
+
+  - id: arxiv-detectgpt
+    name: "DetectGPT: Zero-Shot Machine-Generated Text Detection using Probability Curvature"
+    kind: paper
+    locator: arXiv:2301.11305
+    url: https://arxiv.org/abs/2301.11305
+    pinned: null
+    license: All rights reserved (citation only)
+    derived_patterns:
+      - word_freq_variance
+
+  - id: arxiv-ai-idioms-citation
+    name: "Optimizing LLM Queries in Relational Data Analytics Workloads"
+    kind: paper
+    locator: arXiv:2403.05821
+    url: https://arxiv.org/abs/2403.05821
+    pinned: null
+    license: All rights reserved (citation only)
+    derived_patterns:
+      - ai_idioms
+    notes: Cited by patterns/phrases/ai_idioms.yaml, but the paper is about database query optimization — appears to be a citation error in the pattern YAML.
+
+  - id: jql-type-token-ratio
+    name: Journal of Quantitative Linguistics article on type-token ratio (as cited)
+    kind: paper
+    locator: doi:10.1080/09296174.1990.10820076
+    url: https://www.tandfonline.com/doi/abs/10.1080/09296174.1990.10820076
+    pinned: null
+    license: All rights reserved (citation only)
+    derived_patterns:
+      - type_token_ratio
+    notes: DOI does not resolve in Crossref and JQL only exists since 1994 — the citation in patterns/vocabulary/type_token_ratio.yaml may be wrong.
+
+  - id: wordfreq
+    name: rspeer/wordfreq (word frequency library)
+    kind: web
+    locator: https://github.com/rspeer/wordfreq
+    pinned: null
+    license: MIT
+    derived_patterns:
+      - word_freq_variance
+
+  - id: hn-second-person-comment
+    name: Hacker News comment #47279741 (second-person address)
+    kind: web
+    locator: https://news.ycombinator.com/item?id=47279741
+    pinned: null
+    license: All rights reserved (citation only)
+    derived_patterns:
+      - second_person_address
+    notes: The comment is a sandboxing question in an unrelated Show HN thread — appears to be a citation error in patterns/phrases/second_person_address.yaml.

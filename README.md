@@ -6,12 +6,27 @@ aidar measures known stylistic signals — em dash frequency, hedging phrases, b
 
 Inspired by: [New accounts on Hacker News ten times more likely to use em-dashes](https://www.marginalia.nu/weird-ai-crap/hn/)
 
-## References
+## Sources & credits
 
-- ["Wikipedia: Signs of AI writing"](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) — 2023–present
-- ["Tropes - AI Writing Pattern Directory"](https://tropes.fyi/), Ossama Chaib — 2026
-- [LLM writing style: empirical stylometric study](https://arxiv.org/abs/2410.16107) (PNAS 2025) — GPT-4o's second-most-overused word is "tapestry"; present participles alone are a near-sufficient classifier
-- [LLM writing style resources](https://www.refsmmat.com/notebooks/llm-style.html), Alex Reinhart — curated research notebook
+Everything external that aidar's patterns and docs draw on is tracked in
+[`sources.yaml`](sources.yaml): one entry per upstream with its locator, the
+value this repo last reviewed (`pinned`), license, and which patterns derive
+from it. `python scripts/check_upstreams.py` compares pins against upstream
+and reports drift (a scheduled workflow runs it monthly and files an issue on
+change).
+
+The trope lists are derived from [tropes.fyi](https://tropes.fyi) — "AI
+Writing Tropes to Avoid" and the writing-whip skill by Ossama Chaib, both
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — and pattern
+phrasing draws on Wikipedia's ["Signs of AI writing"](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)
+(CC BY-SA 4.0). Other citations: [marginalia.nu's HN em-dash analysis](https://www.marginalia.nu/weird-ai-crap/hn/),
+[LLM writing style: empirical stylometric study](https://arxiv.org/abs/2410.16107)
+(PNAS 2025) — GPT-4o's second-most-overused word is "tapestry"; present
+participles alone are a near-sufficient classifier — and
+[LLM writing style resources](https://www.refsmmat.com/notebooks/llm-style.html)
+by Alex Reinhart. See `sources.yaml` for the full list, including the
+upstream skill repos (blader/humanizer, oaustegard/claude-skills declauding)
+whose guidance informs the pattern set.
 
 ## What it does
 

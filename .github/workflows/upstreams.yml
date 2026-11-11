@@ -1,0 +1,63 @@
+name: Upstream sources check
+
+on:
+  schedule:
+    - cron: "0 7 3 * *"   # Monthly, 3rd at 07:00 UTC
+  workflow_dispatch:        # Allow manual trigger from GitHub UI
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    name: Check upstream sources for drift
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      # GITHUB_TOKEN is enough for the public API; 60 req/hour unauthenticated
+      # would also work at this cadence. Failures to reach an API are WARN, not
+      # drift — only real drift (or a manifest/patterns mismatch) exits 1.
+      - name: Check upstreams (strict)
+        id: check
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python3 scripts/check_upstreams.py --strict | tee upstream-report.txt
+
+      - name: Open or update the drift issue
+        if: steps.check.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Monthly upstream check found drift (\`$(date -u +%Y-%m-%d)\`, run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."
+            echo
+            echo '```'
+            cat upstream-report.txt
+            echo '```'
+            echo
+            echo "Merging an upstream change is a judgment call — update \`pinned\` in \`sources.yaml\` only after reviewing the new revision."
+          } > issue-body.md
+
+          NUMBER=$(gh issue list --state open --search "Upstream sources drifted in:title" --json number --jq '.[0].number')
+          if [ -n "$NUMBER" ]; then
+            gh issue comment "$NUMBER" --body-file issue-body.md
+          else
+            gh issue create --title "Upstream sources drifted" --body-file issue-body.md
+          fi
+
+      - name: Close a resolved drift issue
+        if: steps.check.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NUMBER=$(gh issue list --state open --search "Upstream sources drifted in:title" --json number --jq '.[0].number')
+          if [ -n "$NUMBER" ]; then
+            gh issue close "$NUMBER" --comment "Latest monthly check found no drift."
+          else
+            echo "No open drift issue."
+          fi
