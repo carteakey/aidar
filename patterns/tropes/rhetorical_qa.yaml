@@ -1,0 +1,24 @@
+id: rhetorical_qa
+version: 1
+name: Rhetorical Self-Answered Question
+description: >
+  The "The X? A Y." beat: the writer poses a question nobody was asking and
+  answers it in the next breath for manufactured drama. Supersedes the fixed
+  "the result?"-style term list formerly in ai_writing_tropes.yaml (moved,
+  not duplicated) by matching the whole shape — question and immediate
+  capitalized answer — instead of the bare question fragment.
+category: tropes
+weight: 0.40
+detection_type: regex
+severity: medium
+references:
+  - https://tropes.fyi/directory
+params:
+  patterns:
+    # "The catch? Nobody knows yet." / "And the result? A mess."
+    # Question ends with ?, answer starts a new sentence, short, ends with .
+    - '\b(?:the|and the|but the)\s+[\w'' -]{1,30}\?\s+[A-Z][^.?!\n]{0,40}[.!]'
+
+  per_n_words: 1000
+  threshold_low: 0.3
+  threshold_high: 1.5

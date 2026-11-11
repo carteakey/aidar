@@ -1,5 +1,5 @@
 id: formal_register
-version: 1
+version: 2
 name: Formal Register Vocabulary
 description: >
   AI models default to formal vocabulary even in casual contexts. Words like
@@ -30,7 +30,7 @@ params:
     - "inasmuch"
     - "insofar"
     - "pursuant to"
-  match_mode: exact
+  match_mode: word_boundary
   per_n_words: 1000
   threshold_low: 2.0
   threshold_high: 10.0

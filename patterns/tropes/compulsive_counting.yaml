@@ -1,0 +1,22 @@
+id: compulsive_counting
+version: 1
+name: Compulsive Counting
+description: >
+  Announcing the count of a list before or while delivering it — "for two
+  reasons", "three things", "five takeaways". The model commits to a number
+  up front to sound organized, then has to hit it. Human writers usually
+  discover the count while writing, not before.
+category: tropes
+weight: 0.40
+detection_type: regex
+severity: medium
+references:
+  - https://tropes.fyi/directory
+params:
+  patterns:
+    # "for two reasons", "three things", "five takeaways", ...
+    - '\b(?:for\s+)?(?:two|three|four|five|six)\s+(?:reasons|things|ways|lessons|takeaways|constraints)\b'
+
+  per_n_words: 1000
+  threshold_low: 0.3
+  threshold_high: 2.0

@@ -19,3 +19,18 @@ thresholds:
   likely_human_max: 15   # 0-15  → LIKELY HUMAN
   likely_ai_min: 30      # 30+   → LIKELY AI
                          # 16-29 → UNCERTAIN
+
+# How pattern scores combine into a category score. See docs/AGGREGATION.md.
+#   mean             - weighted mean over all patterns (current behaviour;
+#                      a rarely-firing pattern dilutes every document).
+#   noisy_or         - 1 - prod(1 - weight*score): union semantics, firing-driven.
+#   mean_plus_cluster- weighted mean over firing patterns + saturating cluster bonus.
+# Default stays mean until the supervisor lands a switch; thresholds below
+# were calibrated for mean.
+aggregation: mean
+
+# Only read by mean_plus_cluster.
+cluster:
+  firing_threshold: 0.30   # normalized score at/above which a pattern counts as firing
+  scale: 0.15              # max bonus a saturated cluster adds to the category score
+  k: 3                     # distinct firing patterns needed to reach the full bonus

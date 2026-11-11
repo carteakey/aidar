@@ -1,0 +1,38 @@
+id: aphoristic_closer
+version: 1
+name: Aphoristic Closer
+description: >
+  Sentences engineered to be quotable rather than true: "the kind of X that
+  looks like Y and is not", "by a wide margin", "was the move", and welded
+  epigrams where a comma bolts a second clause on that restates the first as
+  a maxim. Ported from declauding's aphorism category (MIT, Oskar Austegard);
+  never fired on the human posts of the labelled corpus.
+category: tropes
+weight: 0.20
+detection_type: regex
+severity: low
+references:
+  - https://github.com/oaustegard/claude-skills/tree/main/declauding
+params:
+  patterns:
+    # "the kind of X that ... and is not"
+    - '\bthe\s+kind\s+of\s+\w+\s+that\b[^.]{0,60}\band\s+is\s+not\b'
+
+    # "the X that looks like Y"
+    - '\bthe\s+\w+\s+that\s+looks\s+like\s+\w+'
+
+    # "by a wide margin" / "was the move"
+    - '\bby\s+a\s+wide\s+margin\b'
+    - '\bwas\s+the\s+move\b'
+
+    # "the entire/whole X of the thing"
+    - '\bthe\s+(?:entire|whole)\s+\w+\s+of\s+the\s+thing\b'
+
+    # welded epigram: ", so it ... never ..." / ", and the failure ... is ..." / ", and nothing X's ..."
+    - ',\s*so\s+(?:a|an|the|it|they|you)\s+[^.]{0,50}\bnever\b[^.]{0,40}\.'
+    - ',\s*and\s+(?:the|its)\s+(?:failure|error|cost|risk|difference|effect|result|damage|loss)\s+[^.]{0,40}\bis\b[^.]{0,30}\.'
+    - ',\s*(?:so|and)\s+nothing\s+\w+s\b[^.]{0,40}\.'
+
+  per_n_words: 1000
+  threshold_low: 0.3
+  threshold_high: 1.5

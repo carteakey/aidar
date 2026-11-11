@@ -1,0 +1,37 @@
+id: verification_provenance
+version: 1
+name: Verification Provenance Claims
+description: >
+  Verification compounds asserted without the run behind them: "byte-identical",
+  "mutation-tested", "independently verified", "re-derived", "root-caused".
+  Each claims a second pass or a proof; the tell is the claim standing alone
+  with no diff, number, or command beside it. Ported from declauding's
+  verification category (MIT, Oskar Austegard); never fired on the human
+  posts of the labelled corpus.
+category: tropes
+weight: 0.20
+detection_type: regex
+severity: low
+references:
+  - https://github.com/oaustegard/claude-skills/tree/main/declauding
+params:
+  patterns:
+    # byte-identical / bit-exact / byte-for-byte
+    - '\b(?:byte|bit)-(?:identical|exact|identity|for-byte)\b'
+    - '\bbyte-for-byte\b'
+
+    # mutation-checked / mutation-verified / mutation-tested / mutation-proof
+    - '\bmutation-(?:checked|verified|tested|proof)\b'
+
+    # live-verified / hand-checked / cross-tested / independently-confirmed / adversarially-audited
+    - '\b(?:live|hand|cross|independently|adversarially)-(?:verified|checked|tested|confirmed|audited)\b'
+
+    # re-derived / re-verified / re-measured / re-checked / re-confirmed / re-read
+    - '\bre-(?:derived?|derives|deriving|verified|verifies|measured|measures|checked|confirmed|read|reads)\b'
+
+    # root-caused
+    - '\broot-caused\b'
+
+  per_n_words: 1000
+  threshold_low: 0.3
+  threshold_high: 1.5

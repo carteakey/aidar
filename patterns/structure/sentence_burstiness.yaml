@@ -1,6 +1,6 @@
 id: sentence_burstiness
 name: Low Sentence Length Burstiness
-version: 1
+version: 2
 description: >
   Humans naturally mix short punchy sentences with long winding ones. AI models
   output sentences of suspiciously uniform length — medium-length, clean
@@ -13,7 +13,6 @@ detection_type: linguistic
 severity: medium
 references:
   - https://gptzero.me/faq
-  - https://arxiv.org/abs/2301.07867
 params:
   metric: sentence_burstiness
   threshold_low: 0.2   # inverted CV below 0.2 → score 0 (very bursty = human)

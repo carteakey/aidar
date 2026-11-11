@@ -1,0 +1,27 @@
+id: signposted_conclusion
+version: 1
+name: Signposted Conclusion
+description: >
+  Explicitly announcing the conclusion — "in conclusion", "to sum up", "in
+  summary". Competent writing does not need to tell the reader it is
+  concluding. Consolidates the conclusion-signposts that were duplicated
+  across ai_writing_tropes.yaml and filler_openers.yaml (moved, not
+  duplicated; both bumped): those term lists are replaced by this shape
+  match.
+category: tropes
+weight: 0.35
+detection_type: regex
+severity: low
+references:
+  - https://tropes.fyi/directory
+params:
+  patterns:
+    # Any conclusion signpost, comma or not. Replaces the "in conclusion,"-
+    # style terms in ai_writing_tropes.yaml and the signpost terms in
+    # filler_openers.yaml ("in essence", "overall", "ultimately", "in short"
+    # stay in filler_openers as generic fillers).
+    - '\b(?:in conclusion|to sum up|in summary|to summari[sz]e|to wrap up|wrapping up|in closing|to conclude)\b'
+
+  per_n_words: 1000
+  threshold_low: 0.3
+  threshold_high: 1.5

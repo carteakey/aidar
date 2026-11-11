@@ -1,0 +1,23 @@
+id: retroactive_significance
+version: 1
+name: Retroactive Significance
+description: >
+  Grading a passage the reader has already read: "that's why it matters",
+  "which is why it counted". The significance is asserted after the fact
+  instead of being visible in the passage itself. Ported from declauding's
+  retroactive category (MIT, Oskar Austegard); never fired on the human
+  posts of the labelled corpus.
+category: tropes
+weight: 0.20
+detection_type: regex
+severity: low
+references:
+  - https://github.com/oaustegard/claude-skills/tree/main/declauding
+params:
+  patterns:
+    # "that's why ... matters/counts" / "this is why it mattered"
+    - '\b(?:that|this|which)(?:''?s|\s+(?:is|was))\s+why\b[^.!?\n]{0,80}?\b(?:matter(?:s|ed)|count(?:s|ed))\b'
+
+  per_n_words: 1000
+  threshold_low: 0.3
+  threshold_high: 1.5

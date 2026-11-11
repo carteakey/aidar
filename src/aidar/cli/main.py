@@ -54,7 +54,7 @@ def aidar(ctx: click.Context, patterns_dir: str | None, output: str) -> None:
     weights = load_weight_config(resolved)
 
     registry = PatternRegistry(patterns)
-    analyzer = Analyzer(registry)
+    analyzer = Analyzer(registry, aggregation=weights.aggregation, cluster=weights.cluster)
 
     ctx.obj["analyzer"] = analyzer
     ctx.obj["registry"] = registry
@@ -68,3 +68,4 @@ def aidar(ctx: click.Context, patterns_dir: str | None, output: str) -> None:
 
 # Import subcommands so click can register them
 from aidar.cli import analyze, compare, discover, patterns, scan, track, worker  # noqa: E402, F401
+from aidar.cli import eval as eval_cli  # noqa: F401
