@@ -1,5 +1,5 @@
 id: filler_openers
-version: 2
+version: 3
 name: Filler Opener Phrases
 description: >
   AI models frequently open paragraphs and responses with filler phrases that
@@ -7,7 +7,9 @@ description: >
   "ultimately" appear at the start of paragraphs at abnormally high rates
   compared to human-written editorial content. v2: conclusion signposts
   ("in conclusion", "to sum up", "in summary", ...) moved to the dedicated
-  signposted_conclusion pattern.
+  signposted_conclusion pattern. v3: whole-word matching — the terms are all
+  word/phrase tells, so 'overall' no longer fires inside 'overallness'-style
+  substrings and edge-adjacent occurrences ("Overall,") now match.
 category: phrases
 weight: 0.75
 detection_type: frequency
@@ -24,7 +26,7 @@ params:
     - "simply put"
     - "as a final note"
     - "final thoughts"
-  match_mode: contains
+  match_mode: word_boundary
   per_n_words: 1000
   threshold_low: 1.0
   threshold_high: 8.0

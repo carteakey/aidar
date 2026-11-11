@@ -1,5 +1,5 @@
 id: second_person_address
-version: 2
+version: 3
 name: Second-Person Direct Address
 description: >
   AI content reflexively addresses the reader directly with rhetorical constructions
@@ -78,7 +78,7 @@ params:
     - "here's what worked"
     - "here's what didn't"
 
-  match_mode: contains
+  match_mode: word_boundary
   per_n_words: 1000
   threshold_low: 1.0
   threshold_high: 8.0
