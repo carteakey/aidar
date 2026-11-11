@@ -1,6 +1,6 @@
 id: sentence_burstiness
 name: Low Sentence Length Burstiness
-version: 1
+version: 2
 description: >
   Humans naturally mix short punchy sentences with long winding ones. AI models
   output sentences of suspiciously uniform length — medium-length, clean

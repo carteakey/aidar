@@ -21,11 +21,25 @@ _SENTENCE_RE = re.compile(r'(?<=[.!?])\s+(?=[A-Z"])')
 _QUESTION_RE = re.compile(r'\?')
 # Sentence-ending question
 _QUESTION_SENTENCE_RE = re.compile(r'[^.!?]*\?')
+# Lines that are not prose sentences: markdown headings, list items, ordered
+# list items, table rows. Extraction (T1) passes these through as lines; the
+# old splitter had no sentence-ending punctuation to cut on, so a whole bullet
+# list or table was swallowed into the neighbouring sentence as one giant
+# "sentence" (e.g. a 268-word unit holding a navigation table).
+_NON_PROSE_LINE_RE = re.compile(r'^\s*(?:#{1,6}\s|[-*+]\s|\d+[.)]\s|\|)')
 
 
 def _split_sentences(text: str) -> list[str]:
-    """Naive sentence splitter sufficient for pattern analysis."""
-    sentences = _SENTENCE_RE.split(text.strip())
+    """Naive sentence splitter sufficient for pattern analysis.
+
+    Non-prose lines (headings, bullets, table rows) are dropped first so that
+    burstiness and question-rate measure prose rhythm, not document scaffolding.
+    """
+    prose = "\n".join(
+        line for line in text.splitlines()
+        if line.strip() and not _NON_PROSE_LINE_RE.match(line)
+    )
+    sentences = _SENTENCE_RE.split(prose.strip())
     return [s.strip() for s in sentences if s.strip() and len(s.split()) >= 2]
 
 
