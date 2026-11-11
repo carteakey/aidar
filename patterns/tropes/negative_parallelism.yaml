@@ -1,18 +1,27 @@
 id: negative_parallelism
-version: 1
-name: Negative Parallelism
+version: 2
+name: Negative Parallelism (strong, staged)
 description: >
-  The "It's not X — it's Y" pattern, often with an em dash or period. The single
-  most commonly identified AI writing tell. AI uses this to create false profundity
-  by framing everything as a surprising reframe. Includes causal variants like
-  "not because X, but because Y". This detector uses regex to capture the full
-  scope of these structures across varied subjects and punctuation.
+  The theatrical reframe: a negation staged across a sentence break, where the
+  second sentence re-asserts the subject ("It's not bold. It's backwards.",
+  "The question isn't scale. The question is focus."). humanizer v4.0.0
+  section 1 watches "the same contrast split across sentences ('This does not
+  mean X. It means Y.')" and section "Staging" names "a contrast that only
+  adds weight" as the tell; declauding v0.14.0 declaude_lint.py has a
+  "negation-first" rule for exactly these openers ("the problem/question isn't
+  X"). This is the pure tell, so it keeps the high weight. The plain within-
+  sentence contrast ("not X, but Y") moved to negative_parallelism_plain with
+  a lower weight — humanizer: "Keep a contrast only when the negative half
+  corrects a belief the reader actually holds", which is what the plain form
+  usually does.
 category: tropes
 weight: 0.90
 detection_type: regex
 severity: high
 references:
   - https://tropes.fyi
+  - https://github.com/blader/humanizer
+  - https://github.com/oaustegard/claude-skills/tree/main/declauding
 params:
   patterns:
     # "It's not X [punctuation] It's Y" or "Something isn't X. It's Y."
@@ -21,15 +30,17 @@ params:
     # Matches: "The problem isn't the code. It's the architecture."
     # Matches: "They aren't users — they're participants."
     - '\b(?:it''?s not|it is not|\w+ isn''?t|\w+ aren''?t)\b[^.,:;—–\n]{1,80}[.,:;—–\s]\s*(?:but\b|it''?s\b|it is\b|they''?re\b|they are\b|rather\b)'
-    
+
     # "Not because X, but because Y"
     # Matches: "Not because it's easy, but because it's hard."
     - '\bnot because\s+[^.,:;—–\n]{1,80}[.,:;—–\s]\s*but because\b'
-    
-    # "Not X, but Y" (more generic, tighter constraint to avoid false positives)
-    # Matches: "Not merely a tool, but a platform."
-    - '\bnot (?:just|merely|simply|only)?\s*[^.,:;—–\n]{1,60}[.,:;—–]\s*but (?:rather|instead|also)?\s*\b'
-    
+
+    # Cross-sentence subject reprise: "The question isn't X. The question is Y."
+    # Subject nouns per declauding's negation-first rule (problem, failure,
+    # issue, point, question, bug, risk); the second sentence re-opens the
+    # subject and asserts what it IS.
+    - '\b(?:the|this|that)\s+(?:problem|failure|issue|point|question|bug|risk)\s+(?:isn''t|is not|wasn''t|was not|aren''t|are not|weren''t|were not)\b[^.!?\n]{0,80}[.!?]\s*(?:the|this|that|it)\b[^.!?\n]{1,60}\b(?:is|was|means|should)\b'
+
   per_n_words: 1000
   threshold_low: 0.5   # Even 1 instance per 2000 words is a strong signal
   threshold_high: 5.0

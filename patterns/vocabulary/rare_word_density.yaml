@@ -1,5 +1,5 @@
 id: rare_word_density
-version: 1
+version: 2
 name: Rare/Sophisticated Word Density
 description: >
   AI models often insert unnecessarily sophisticated vocabulary to appear
@@ -40,7 +40,7 @@ params:
     - "contextualize"
     - "encapsulate"
     - "encapsulates"
-  match_mode: exact
+  match_mode: word_boundary
   per_n_words: 1000
   threshold_low: 1.5
   threshold_high: 8.0

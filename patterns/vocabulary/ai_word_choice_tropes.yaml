@@ -1,5 +1,5 @@
 id: ai_word_choice_tropes
-version: 2
+version: 3
 name: AI Word Choice Tropes
 description: >
   Word-level substitutions and phrasing patterns that signal AI authorship, drawn
@@ -79,8 +79,6 @@ params:
     - "delve into the"
     - "delve deeper"
     - "delve into this"
-    - "certainly,"
-    - "certainly."
     - "utilize"
     - "leverage the"
     - "leverage our"
@@ -158,7 +156,7 @@ params:
     - "the mosaic of"
     - "the pinnacle of"
 
-  match_mode: contains
+  match_mode: word_boundary
   per_n_words: 1000
   threshold_low: 1.0
   threshold_high: 10.0

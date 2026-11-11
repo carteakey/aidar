@@ -1,6 +1,6 @@
 id: question_avoidance
 name: Question Avoidance
-version: 1
+version: 2
 description: >
   Human writers ask questions — rhetorical, direct, conversational. AI-generated
   text almost never asks questions; it answers them. Near-zero question rates in
