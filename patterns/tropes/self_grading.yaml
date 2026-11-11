@@ -1,0 +1,36 @@
+id: self_grading
+version: 1
+name: Self-Grading
+description: >
+  Grading one's own rigor instead of showing it: "earned, not asserted",
+  "that is what the data shows", "it's worth noting", "a distinction worth
+  making", "genuinely novel". The verdict arrives attached to the sentence
+  rather than from it. Ported from declauding's self-grading category (MIT,
+  Oskar Austegard). Supersedes the "it's worth noting" term formerly in
+  ai_writing_tropes.yaml (moved, not duplicated).
+category: tropes
+weight: 0.20
+detection_type: regex
+severity: low
+references:
+  - https://github.com/oaustegard/claude-skills/tree/main/declauding
+params:
+  patterns:
+    # "earned, not asserted" / "not a relabel" / "to be clear, this is"
+    - '\b(?:earned,?\s+not\s+asserted|not\s+a\s+relabel|to be clear,\s*this is)\b'
+
+    # "that is what the data/numbers/table/evidence shows"
+    - '\b(?:that|this)\s+is\s+what\s+the\s+(?:data|numbers?|table|evidence)\s+shows?\b'
+
+    # "it's worth noting / it is worth mentioning / it is important to point out"
+    - '\b(?:it''?s|it is)\s+(?:worth|important)\s+(?:noting|mentioning|pointing out)\b'
+
+    # "a distinction worth making/drawing/..."
+    - '\ba\s+distinction\s+worth\b'
+
+    # "genuinely useful/interesting/hard/novel/..."
+    - '\bgenuinely\s+(?:useful|interesting|hard|novel|different|new|considered|rigorous|surprising|original|important)\b'
+
+  per_n_words: 1000
+  threshold_low: 0.3
+  threshold_high: 1.5

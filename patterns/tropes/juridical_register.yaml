@@ -1,0 +1,30 @@
+id: juridical_register
+version: 1
+name: Juridical Register
+description: >
+  Program state described in courtroom vocabulary: systems that "refuse",
+  "settle", "rule" or "sanction"; refusals, rulings, verdicts and standing
+  used for ordinary software behaviour. A program has conditions and exit
+  codes, not a legal position. Ported from declauding's juridical category
+  (MIT, Oskar Austegard), which never fired on the human posts of the
+  labelled corpus.
+category: tropes
+weight: 0.20
+detection_type: regex
+severity: low
+references:
+  - https://github.com/oaustegard/claude-skills/tree/main/declauding
+params:
+  patterns:
+    # "<X> refuses/declines/declares/admits/rules/... <the|a|that|it> ..."
+    - '\b(?:the\s+)?\w+\s+(?:refuses|declines|admits|rules|ratifies|sanctions|honou?rs|forbids|governs|decides|settles)\s+(?:the|a|an|any|no|that|it)\b'
+
+    # "a refusal/ruling/verdict/precedent/carve-out/remedy/obligation/standing/grounds"
+    - '\b(?:a|the|its|this|that|one)\s+(?:refusal|ruling|verdict|precedent|carve-out|remedy|obligation|standing|grounds)\b'
+
+    # "has/lacks/without standing"
+    - '\b(?:has|have|had|lacks?|without|no)\s+standing\b'
+
+  per_n_words: 1000
+  threshold_low: 0.3
+  threshold_high: 1.5
