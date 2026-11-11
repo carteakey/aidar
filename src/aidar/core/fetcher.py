@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import httpx
@@ -10,6 +11,46 @@ _HEADERS = {
         "Mozilla/5.0 (compatible; aidar/0.1; +https://github.com/carteakey/aidar)"
     )
 }
+
+# Characters that make up pure-punctuation markdown lines: table separators
+# (|---|---|) and horizontal rules (---, ***, ___). Such lines carry no words
+# but would register as bullet lines, paragraphs, and sentence fragments
+# downstream. Blank lines are kept — they are the paragraph separators.
+_MD_PUNCT_CHARS = frozenset("|-:*_=: \t")
+
+# Markdown structural syntax stripped before counting words, so "# Header" and
+# "- item" markers don't inflate the per-1000-words denominators.
+_MD_HEADING_RE = re.compile(r"^#{1,6}\s+", re.MULTILINE)
+_MD_BULLET_RE = re.compile(r"^\s*[-*+]\s+", re.MULTILINE)
+_MD_ENUM_RE = re.compile(r"^\s*\d+[.)]\s+", re.MULTILINE)
+_MD_EMPHASIS_RE = re.compile(r"`+|\*+")
+_MD_TABLE_PIPE_RE = re.compile(r"\|")
+
+# Trafilatura marks list items with "- " only, so a line-initial "*" is always
+# emphasis ("**Note:** ..."), never a bullet — but it would count as one in
+# bullet_density. Strip the leading markers, keep inline ones.
+_MD_LEADING_ASTERISK_RE = re.compile(r"(?m)^(\s*)\*+(?=\S)")
+
+
+def _clean_markdown(text: str) -> str:
+    """Drop markdown lines that are pure punctuation (hrules, table separators)
+    and de-emphasize paragraph-initial bold/italic that mimics bullet markers."""
+    lines = [
+        line
+        for line in text.splitlines()
+        if not (line.strip() and set(line.strip()) <= _MD_PUNCT_CHARS)
+    ]
+    return _MD_LEADING_ASTERISK_RE.sub(r"\1", "\n".join(lines))
+
+
+def count_markdown_words(text: str) -> int:
+    """Word count excluding markdown syntax markers (headings, bullets, emphasis)."""
+    stripped = _MD_HEADING_RE.sub("", text)
+    stripped = _MD_BULLET_RE.sub("", stripped)
+    stripped = _MD_ENUM_RE.sub("", stripped)
+    stripped = _MD_EMPHASIS_RE.sub("", stripped)
+    stripped = _MD_TABLE_PIPE_RE.sub(" ", stripped)
+    return len(stripped.split())
 
 
 class FetchError(Exception):
@@ -38,15 +79,38 @@ def _extract(html: str) -> FetchResult:
     )
 
     if not doc or not doc.text or len(doc.text.split()) < 20:
-        # Fallback: plain extract without metadata
-        text = trafilatura.extract(html, include_tables=True, no_fallback=False)
-        if not text or len(text.split()) < 20:
+        # Fallback: extract without metadata
+        text = trafilatura.extract(
+            html,
+            output_format="markdown",
+            include_formatting=True,
+            include_tables=True,
+            no_fallback=False,
+        )
+        if not text or count_markdown_words(text) < 20:
             return None
-        return FetchResult(text=text, word_count=count_words(text), raw_html=html)
+        return FetchResult(text=_clean_markdown(text), word_count=count_markdown_words(text), raw_html=html)
+
+    # Markdown output keeps the document shape (# headers, - bullets, **bold**)
+    # that structural and text-fallback detectors read; plain text drops it.
+    text = trafilatura.extract(
+        html,
+        output_format="markdown",
+        include_formatting=True,
+        include_comments=False,
+        include_tables=True,
+        no_fallback=False,
+    )
+    if not text:
+        text = doc.text
+        word_count = count_words(text)
+    else:
+        text = _clean_markdown(text)
+        word_count = count_markdown_words(text)
 
     return FetchResult(
-        text=doc.text,
-        word_count=count_words(doc.text),
+        text=text,
+        word_count=word_count,
         title=doc.title or None,
         published_date=doc.date or None,
         raw_html=html,
@@ -73,7 +137,7 @@ def fetch_url(url: str, timeout: int = 30) -> FetchResult:
 
 
 def read_file(path: Path) -> FetchResult:
-    """Read a local .txt or .html file."""
+    """Read a local .txt, .md or .html file."""
     if not path.exists():
         raise FetchError(f"File not found: {path}")
 
@@ -87,7 +151,8 @@ def read_file(path: Path) -> FetchResult:
 
     if not raw.strip():
         raise FetchError(f"File is empty: {path}")
-    return FetchResult(text=raw, word_count=count_words(raw))
+    word_count = count_markdown_words(raw) if path.suffix.lower() == ".md" else count_words(raw)
+    return FetchResult(text=raw, word_count=word_count)
 
 
 def count_words(text: str) -> int:
