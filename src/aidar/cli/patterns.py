@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 import click
+import yaml
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
 from aidar.cli.main import aidar
+from aidar.models.config import WeightConfig
 
 console = Console()
+
+_BEGIN = "<!-- BEGIN GENERATED: pattern catalog — regenerate with: aidar patterns catalog --write -->"
+_END = "<!-- END GENERATED: pattern catalog -->"
 
 
 @aidar.group()
@@ -128,3 +136,229 @@ def show_pattern(ctx: click.Context, pattern_id: str) -> None:
         console.print(f"\n[bold]References:[/bold]")
         for ref in pattern.references:
             console.print(f"  {ref}")
+
+
+# --------------------------------------------------------------------------
+# Generated pattern catalog (docs/PATTERN_CATALOG.md)
+#
+
+
+def _fmt_num(value: object) -> str:
+    """Compact deterministic number rendering ('%g'); em dash for missing."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return "—"
+    return f"{value:g}"
+
+
+def _pattern_files(patterns_dir: Path) -> dict[str, Path]:
+    """pattern id -> YAML path (mirrors load_patterns' discovery rules)."""
+    files: dict[str, Path] = {}
+    models_dir = patterns_dir / "models"
+    for yaml_file in sorted(patterns_dir.rglob("*.yaml")):
+        if yaml_file.name.startswith("_") or yaml_file.is_relative_to(models_dir):
+            continue
+        try:
+            data = yaml.safe_load(yaml_file.read_text(encoding="utf-8"))
+        except yaml.YAMLError:
+            continue
+        if isinstance(data, dict) and "id" in data:
+            files[str(data["id"])] = yaml_file
+    return files
+
+
+def _source_map(patterns_dir: Path) -> dict[str, list[str]]:
+    """pattern id -> sorted source ids from sources.yaml derived_patterns."""
+    manifest = patterns_dir.parent / "sources.yaml"
+    if not manifest.exists():
+        return {}
+    try:
+        data = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+    except yaml.YAMLError:
+        return {}
+    mapping: dict[str, list[str]] = {}
+    for src in data.get("sources") or []:
+        for pid in src.get("derived_patterns") or []:
+            mapping.setdefault(str(pid), []).append(str(src["id"]))
+    return {pid: sorted(ids) for pid, ids in mapping.items()}
+
+
+def _render_catalog_block(
+    patterns: list,
+    weights: WeightConfig,
+    likely_human: int,
+    likely_ai: int,
+    patterns_dir: Path,
+    doc_dir: Path,
+) -> str:
+    """Render the generated markdown section, including the marker comments."""
+    lines: list[str] = [_BEGIN, ""]
+
+    lines += [
+        "## Category Weights",
+        "",
+        "| Category | Weight |",
+        "|---|---:|",
+    ]
+    for cat, w in sorted(weights.as_dict().items()):
+        lines.append(f"| {cat} | {w:g} |")
+    lines += ["", "Source: [`patterns/_weights.yaml`](../patterns/_weights.yaml)", ""]
+
+    lines += [
+        "## Aggregate Labels",
+        "",
+        "| Label | Aggregate score |",
+        "|---|---|",
+        f"| LIKELY HUMAN | 0 – {likely_human} |",
+        f"| UNCERTAIN | {likely_human + 1} – {likely_ai - 1} |",
+        f"| LIKELY AI | {likely_ai} – 100 |",
+        "",
+    ]
+
+    lines += [
+        "## Pattern Inventory",
+        "",
+        (
+            "| Category | Pattern ID | Type | Match Mode | Weight | Version | Severity "
+            "| `threshold_low` | `threshold_high` | Sources | References | File |"
+        ),
+        "|---|---|---|---|---:|---:|---|---:|---:|---|---|---|",
+    ]
+    file_by_id = _pattern_files(patterns_dir)
+    sources_by_id = _source_map(patterns_dir)
+    for p in sorted(patterns, key=lambda p: (p.category, p.id)):
+        match_mode = (
+            str(p.params.get("match_mode", "contains")) if p.detection_type == "frequency" else "—"
+        )
+        sources = ", ".join(sources_by_id.get(p.id, [])) or "—"
+        refs = ", ".join(f"<{ref}>" for ref in p.references) or "—"
+        if p.id in file_by_id:
+            rel = file_by_id[p.id].relative_to(patterns_dir)
+            target = Path(os.path.relpath(file_by_id[p.id], doc_dir)).as_posix()
+            file_cell = f"[`patterns/{rel.as_posix()}`]({target})"
+        else:
+            file_cell = "—"
+        lines.append(
+            f"| {p.category} | `{p.id}` | {p.detection_type} | {match_mode} | {p.weight:g} "
+            f"| {p.version} | {p.severity} | {_fmt_num(p.params.get('threshold_low'))} "
+            f"| {_fmt_num(p.params.get('threshold_high'))} | {sources} | {refs} | {file_cell} |"
+        )
+    lines += [
+        "",
+        (
+            "Thresholds are per-1000-words rates for `frequency`/`regex` patterns and raw metric "
+            "values for `structural`/`linguistic` patterns. `match_mode` applies to `frequency` "
+            "patterns only (`contains` unless the YAML says otherwise)."
+        ),
+        "",
+        _END,
+    ]
+    return "\n".join(lines)
+
+
+_LEGACY_SECTIONS = ("## Category Weights", "## Pattern Inventory", "## Aggregate Labels")
+
+
+def _splice_catalog(doc: str, block: str) -> str:
+    """Replace only the generated region, preserving hand-written parts.
+
+    With markers present: swap the text between them. Without markers
+    (legacy hand-maintained doc): insert the marked block where the legacy
+    generated sections started and keep everything from '## Tuning Log' on.
+    """
+    if _BEGIN in doc and _END in doc:
+        pre = doc[: doc.index(_BEGIN)]
+        post = doc[doc.index(_END) + len(_END):]
+        return pre + block + post
+
+    tail_at = doc.find("## Tuning Log")
+    if tail_at == -1:
+        tail_at = len(doc)
+    tail = doc[tail_at:]
+    head = doc[:tail_at]
+    cut = len(head)
+    for marker in _LEGACY_SECTIONS:
+        idx = head.find(marker)
+        if idx != -1:
+            cut = min(cut, idx)
+    return head[:cut] + block + ("\n\n" + tail if tail else "")
+
+
+def _load_weights_file(patterns_dir: Path) -> dict:
+    weights_file = patterns_dir / "_weights.yaml"
+    if not weights_file.exists():
+        return {}
+    try:
+        return yaml.safe_load(weights_file.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return {}
+
+
+@patterns.command("catalog")
+@click.option("--write", is_flag=True, help="Update the doc in place.")
+@click.option(
+    "--check",
+    "check_mode",
+    is_flag=True,
+    help="Exit 1 if the doc differs from what would be generated (for CI).",
+)
+@click.option(
+    "--file",
+    "doc_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    help="Target doc (default: docs/PATTERN_CATALOG.md next to the patterns dir).",
+)
+@click.pass_context
+def catalog(
+    ctx: click.Context, write: bool, check_mode: bool, doc_path: Path | None
+) -> None:
+    """Render the generated parts of docs/PATTERN_CATALOG.md from the YAMLs.
+
+    Without flags the generated block is printed to stdout. Hand-written
+    sections (intro, Tuning Workflow, Tuning Log) are never touched: the
+    generated block lives between BEGIN/END marker comments and only that
+    region is replaced. Output is deterministic (sorted by category, then id).
+    """
+    if write and check_mode:
+        raise click.UsageError("Use --write or --check, not both.")
+
+    registry = ctx.obj["registry"]
+    config = ctx.obj["config"]
+    patterns_dir: Path = ctx.obj["patterns_dir"]
+
+    doc_path = doc_path or (patterns_dir.parent / "docs" / "PATTERN_CATALOG.md")
+    block = _render_catalog_block(
+        patterns=registry.all_patterns(),
+        weights=config.weights,
+        likely_human=config.likely_human_threshold,
+        likely_ai=config.likely_ai_threshold,
+        patterns_dir=patterns_dir,
+        doc_dir=doc_path.parent,
+    )
+
+    if check_mode:
+        if not doc_path.exists():
+            console.print(f"[red]Catalog doc not found: {doc_path}[/red]")
+            raise SystemExit(1)
+        current = doc_path.read_text(encoding="utf-8")
+        if current == _splice_catalog(current, block):
+            console.print(f"[green]Catalog is up to date:[/green] {doc_path}")
+            return
+        console.print(
+            f"[red]Catalog is stale:[/red] {doc_path} does not match the YAMLs. "
+            "Run 'aidar patterns catalog --write' and commit the result."
+        )
+        raise SystemExit(1)
+
+    if write:
+        doc_path.parent.mkdir(parents=True, exist_ok=True)
+        if doc_path.exists():
+            current = doc_path.read_text(encoding="utf-8")
+            updated = _splice_catalog(current, block)
+        else:
+            updated = block
+        doc_path.write_text(updated, encoding="utf-8")
+        console.print(f"[green]Wrote[/green] {doc_path}")
+        return
+
+    click.echo(block)

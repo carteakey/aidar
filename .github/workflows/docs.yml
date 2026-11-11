@@ -1,0 +1,32 @@
+name: Docs check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  catalog:
+    name: Generated pattern catalog is current
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install aidar
+        run: pip install -e .
+
+      # Fails when docs/PATTERN_CATALOG.md no longer matches the pattern
+      # YAMLs / _weights.yaml / sources.yaml. Regenerate with:
+      #   aidar patterns catalog --write
+      - name: Check generated catalog
+        run: aidar patterns catalog --check
